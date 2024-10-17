@@ -15,6 +15,8 @@
 // @grant        GM_xmlhttpRequest
 // @grant        GM_getResourceText
 // @grant        GM_addStyle
+// @downloadURL  https://raw.githubusercontent.com/roberth1silva/fastconnectsgp/refs/heads/main/sgpgaleria.user.js
+// @updateURL    https://raw.githubusercontent.com/roberth1silva/fastconnectsgp/refs/heads/main/sgpgaleria.user.js
 // ==/UserScript==
 /* global $ */
 
