@@ -45,6 +45,9 @@ $(document).ready(function(){
     lightGallery(document.getElementById('newgallery'), {
         licenseKey: 'your_license_key',
         thumbnail: true,
+        infiniteZoom: true,
+        zoom: true,
+        showZoomInOutIcons: true,
         plugins: [lgVideo, lgZoom, lgThumbnail]
     });
 
@@ -64,7 +67,9 @@ $(document).ready(function(){
 
     $("#lg-prev-1").html("<i class='light-icon fa fa-chevron-left'></i>");
     $("#lg-next-1").html("<i class='light-icon fa fa-chevron-right'></i>");
-    $("#lg-actual-size-1").html("<i class='light-icon fa fa-search-plus'></i>");
+    $("#lg-zoom-in-1").html("<i class='light-icon fa fa-search-plus'></i>");
+    $("#lg-zoom-out-1").html("<i class='light-icon fa fa-search-minus'></i>");
+    $("#lg-actual-size-1").html("<i class='light-icon fa fa-search'></i>");
     $("#lg-download-1").html("<i class='light-icon fa fa-download'></i>");
     $("#lg-close-1").html("<i class='light-icon fa fa-times'></i>");
 });
