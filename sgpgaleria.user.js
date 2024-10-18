@@ -5,6 +5,7 @@
 // @description  SGP Galeria
 // @author       Roberth
 // @match        https://fastconnect.sgp.net.br/admin/atendimento/ocorrencia/os/*
+// @match        http://45.164.128.5:8000/admin/atendimento/ocorrencia/os/*
 // @icon         data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==
 // @require      https://code.jquery.com/jquery-3.7.1.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/lightgallery/2.7.2/lightgallery.min.js
