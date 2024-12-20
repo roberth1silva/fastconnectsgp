@@ -23,7 +23,7 @@
 
 $(document).ready(function(){
     let x = 0;
-    $(".tooltip-anexo-os > p > a").each(function(index){
+    $("span:contains('Anexos')").parent().next().find("a").each(function(index){
         if(x == 0)
         {
             $(this).parent().parent().parent().prepend("<div id='newgallery' style='display: none;'></div><a id='opengallery' class='button blue'> Abrir Galeria </a>");
@@ -31,16 +31,19 @@ $(document).ready(function(){
         let text = $(this).html();
         let extension = text.split('.').pop();
         let img = $(this).attr('href');
-        if(extension == 'mp4')
+        if(extension != '')
         {
-            let video = '{"source": [{"src":"' + img + '", "type":"video/mp4"}], "attributes": {"preload": false, "playsinline": true, "controls": true}}';
-            $("#newgallery").append("<a data-video='" + video + "'><img class='galleryimg" + x + "' src='/static/all/img/logo/menu-logo.svg?v=3.0'></a>");
+            if(extension == 'mp4')
+            {
+                let video = '{"source": [{"src":"' + img + '", "type":"video/mp4"}], "attributes": {"preload": false, "playsinline": true, "controls": true}}';
+                $("#newgallery").append("<a data-video='" + video + "'><img class='galleryimg" + x + "' src='/static/all/img/logo/menu-logo.svg?v=3.0'></a>");
+            }
+            else
+            {
+                $("#newgallery").append("<a href=" + img + "><img class='galleryimg" + x + "' src='" + img + "'></a>");
+            }
+            x = x + 1;
         }
-        else
-        {
-            $("#newgallery").append("<a href=" + img + "><img class='galleryimg" + x + "' src='" + img + "'></a>");
-        }
-        x = x + 1;
     });
 
     lightGallery(document.getElementById('newgallery'), {
