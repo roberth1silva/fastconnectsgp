@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Preenchimento OS
 // @namespace    http://tampermonkey.net/
-// @version      2024-12-28
+// @version      2024-12-30
 // @description  Croqui OS
 // @author       Thiago
 // @match        https://fastconnect.sgp.net.br/admin/atendimento/cliente/*/ocorrencia/add/
@@ -11,7 +11,15 @@
 // ==/UserScript==
 /* global $ */
 var scriptElem = document.createElement('script');
-scriptElem.innerHTML = "$('#id_tipo').change(function(){ if($(this).val() == 123 || $(this).val() == 124) { $('#id_conteudo').val(''); } });";
+var scriptHTML = "";
+scriptHTML += "$('#id_tipo').change(function(){";
+scriptHTML += "if($(this).val() != 123 && $(this).val() != 124 && $('#id_conteudo').val() == '') {";
+scriptHTML += "$('#id_conteudo').val($('#id_conteudo_aux').val());";
+scriptHTML += "var innerHeight_conteudo = $('#id_conteudo').prop('scrollHeight');";
+scriptHTML += "$('#id_conteudo').height(innerHeight_conteudo);";
+scriptHTML += "}";
+scriptHTML += "});";
+scriptElem.innerHTML = scriptHTML;
 document.body.appendChild(scriptElem);
 (function() {
     'use strict';
@@ -44,7 +52,7 @@ document.body.appendChild(scriptElem);
 					else if(x == 3)
 					{
 						cpf_cnpj = $(this).html();
-						if(cpf_cnpj.length <= 17)
+						if(cpf_cnpj.length == 17)
 						{
 							let aux = cliente.split(' ');
 							responsavel = aux[0] + ' ' + aux[1];
@@ -64,18 +72,17 @@ document.body.appendChild(scriptElem);
 					preenchimento += 'Relato Atendimento: \n';
 					preenchimento += 'Forma de pagamento: \n';
 					preenchimento += 'Obs: \n';
-					campoConteudo.val(preenchimento);
-					if (campoConteudo.contentEditable === 'true')
+                    $('body').append("<textarea hidden id='id_conteudo_aux'></textarea>");
+					$('#id_conteudo_aux').val(preenchimento);
+					if ($('#id_conteudo_aux').attr('contentEditable') === 'true')
 					{
-						campoConteudo.innerHTML = preenchimento;
+						$('#id_conteudo_aux').html(preenchimento);
 					}
-					console.log('Campo Conteúdo preenchido automaticamente!');
-					var innerHeight_conteudo = $('#id_conteudo').prop('scrollHeight');
-					$('#id_conteudo').height(innerHeight_conteudo);
+					console.log('Campo Auxiliar criado com Sucesso!');
 				}
                 else
 				{
-                    console.log('Campo Conteúdo não encontrado!');
+                    console.log('Campo Auxiliar com Erro ao ser criado');
                 }
 
             }, 0); // Espera 0,5 segundos antes de preencher os campos
