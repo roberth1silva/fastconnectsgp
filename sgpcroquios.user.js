@@ -44,7 +44,7 @@ document.body.appendChild(scriptElem);
 					else if(x == 3)
 					{
 						cpf_cnpj = $(this).html();
-						if(cpf_cnpj.length == 17)
+						if(cpf_cnpj.length <= 17)
 						{
 							let aux = cliente.split(' ');
 							responsavel = aux[0] + ' ' + aux[1];
