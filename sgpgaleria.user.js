@@ -53,7 +53,7 @@ $(document).ready(function(){
         infiniteZoom: true,
         zoom: true,
         showZoomInOutIcons: true,
-        plugins: [lgVideo, lgZoom, lgThumbnail]
+        plugins: [lgVideo, lgZoom, lgThumbnail, lgRotate]
     });
 
     const myCss = GM_getResourceText("REMOTE_CSS");
