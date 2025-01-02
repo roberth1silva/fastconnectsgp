@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SGP Galeria
 // @namespace    http://tampermonkey.net/
-// @version      2024-10-18
+// @version      2025-01-02
 // @description  SGP Galeria
 // @author       Roberth
 // @match        https://fastconnect.sgp.net.br/admin/atendimento/ocorrencia/os/*
