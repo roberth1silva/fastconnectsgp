@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SGP Galeria
 // @namespace    http://tampermonkey.net/
-// @version      2025-01-02
+// @version      2025-01-02 1.0
 // @description  SGP Galeria
 // @author       Roberth
 // @match        https://fastconnect.sgp.net.br/admin/atendimento/ocorrencia/os/*
@@ -53,6 +53,8 @@ $(document).ready(function(){
         infiniteZoom: true,
         zoom: true,
         showZoomInOutIcons: true,
+        flipHorizontal: false,
+        flipVertical: false,
         plugins: [lgVideo, lgZoom, lgThumbnail, lgRotate]
     });
 
@@ -65,6 +67,8 @@ $(document).ready(function(){
     GM_addStyle(".lg-toolbar .lg-download:after { content:none; }");
     GM_addStyle(".lg-toolbar .lg-close:after { content:none; }");
     GM_addStyle(".lg-icon.lg-zoom-out:after { content:none; }");
+    GM_addStyle(".lg-rotate-right:after { content:none; }");
+    GM_addStyle(".lg-rotate-left:after { content:none; }");
 
     $("#opengallery").on("click", function() {
         $(".galleryimg0").trigger("click");
@@ -77,4 +81,6 @@ $(document).ready(function(){
     $("#lg-actual-size-1").html("<i class='light-icon fa fa-search'></i>");
     $("#lg-download-1").html("<i class='light-icon fa fa-download'></i>");
     $("#lg-close-1").html("<i class='light-icon fa fa-times'></i>");
+    $("#lg-rotate-left").html("<i class='light-icon fa fa-undo'></i>");
+    $("#lg-rotate-right").html("<i class='light-icon fa fa-undo' style='-webkit-transform: scaleX(-1); transform: scaleX(-1);'></i>");
 });
