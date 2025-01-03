@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Preenchimento OS
 // @namespace    http://tampermonkey.net/
-// @version      2024-12-30
+// @version      2025-01-03 2.0
 // @description  Croqui OS
 // @author       Thiago
 // @match        https://fastconnect.sgp.net.br/admin/atendimento/cliente/*/ocorrencia/add/
@@ -13,11 +13,17 @@
 var scriptElem = document.createElement('script');
 var scriptHTML = "";
 scriptHTML += "$('#id_tipo').change(function(){";
-scriptHTML += "if($(this).val() != 123 && $(this).val() != 124 && $('#id_conteudo').val() == '') {";
-scriptHTML += "$('#id_conteudo').val($('#id_conteudo_aux').val());";
+scriptHTML += "if($('#id_conteudo').val() == '') {";
+scriptHTML += "if($(this).val() == 123) {";
+scriptHTML += "$('#id_conteudo').val($('#id_conteudo_B').val());";
+scriptHTML += "} else if($(this).val() == 124) {";
+scriptHTML += "$('#id_conteudo').val($('#id_conteudo_C').val());";
+scriptHTML += "} else {";
+scriptHTML += "$('#id_conteudo').val($('#id_conteudo_A').val());";
+scriptHTML += "}";
+scriptHTML += "} else { console.log('Campo do Conteúdo com informações'); }";
 scriptHTML += "var innerHeight_conteudo = $('#id_conteudo').prop('scrollHeight');";
 scriptHTML += "$('#id_conteudo').height(innerHeight_conteudo);";
-scriptHTML += "}";
 scriptHTML += "});";
 scriptElem.innerHTML = scriptHTML;
 document.body.appendChild(scriptElem);
@@ -27,7 +33,9 @@ document.body.appendChild(scriptElem);
     // Função para buscar o campo "Conteúdo" e preenchê-lo
     function preencherConteudo()
 	{
-		var preenchimento = '';
+		var preenchimentoA = '';
+        var preenchimentoB = '';
+        var preenchimentoC = '';
 		var cliente;
 		var idCliente;
 		var cpf_cnpj;
@@ -63,26 +71,74 @@ document.body.appendChild(scriptElem);
 				let campoConteudo = $('#id_conteudo');
 				if (campoConteudo)
 				{
-                    preenchimento += 'Etiqueta (ID Cliente): ' + idCliente + '\n';
-					preenchimento += 'Responsável: ' + responsavel + '\n';
-					preenchimento += 'Plano Desejado: \n';
-					preenchimento += 'Contrato Físico: \n';
-					preenchimento += 'Endereço: \n';
-					preenchimento += 'Serviço: \n';
-					preenchimento += 'Relato Atendimento: \n';
-					preenchimento += 'Forma de pagamento: \n';
-					preenchimento += 'Obs: \n';
-                    $('body').append("<textarea hidden id='id_conteudo_aux'></textarea>");
-					$('#id_conteudo_aux').val(preenchimento);
-					if ($('#id_conteudo_aux').attr('contentEditable') === 'true')
+                    preenchimentoA += 'Etiqueta (ID Cliente): ' + idCliente + '\n';
+					preenchimentoA += 'Responsável: ' + responsavel + '\n';
+					preenchimentoA += 'Plano Desejado: \n';
+					preenchimentoA += 'Contrato Físico: \n';
+					preenchimentoA += 'Endereço: \n';
+					preenchimentoA += 'Serviço: \n';
+					preenchimentoA += 'Relato Atendimento: \n';
+					preenchimentoA += 'Forma de pagamento: \n';
+					preenchimentoA += 'Obs: ';
+                    $('body').append("<textarea hidden id='id_conteudo_A'></textarea>");
+					$('#id_conteudo_A').val(preenchimentoA);
+					if ($('#id_conteudo_A').attr('contentEditable') === 'true')
 					{
-						$('#id_conteudo_aux').html(preenchimento);
+						$('#id_conteudo_A').html(preenchimentoA);
 					}
-					console.log('Campo Auxiliar criado com Sucesso!');
+					console.log('Campo A criado com Sucesso!');
+                    preenchimentoB += 'Pós-venda INSTALAÇÃO/TRANSFERÊNCIA\n';
+                    preenchimentoB += 'Como você avalia o atendimento prestado pela empresa até o momento:\n';
+                    preenchimentoB += '(   ) BOM (   ) RUIM – NOTA 10\n';
+                    preenchimentoB += 'A INSTALAÇÃO foi feita de maneira correta?\n';
+                    preenchimentoB += '(   ) SIM (   ) NÃO\n';
+                    preenchimentoB += 'O atendimento e as informações passadas pelo técnico foi?\n';
+                    preenchimentoB += '(   ) BOM (   ) RUIM\n';
+                    preenchimentoB += 'Os equipamentos foram instalados no local solicitado?\n';
+                    preenchimentoB += '(   ) SIM (   ) NÃO\n';
+                    preenchimentoB += 'O nosso serviço atendeu a suas expectativas?\n';
+                    preenchimentoB += '(   ) SIM (   ) NÃO\n';
+                    preenchimentoB += 'Você indicaria nossos serviços?\n';
+                    preenchimentoB += '(   ) SIM (   ) NÃO\n';
+                    preenchimentoB += '• Benefício de indicação – OK\n';
+                    preenchimentoB += '• Aplicativo financeiro – OK\n';
+                    preenchimentoB += '• Informação financeiro – OK\n';
+                    preenchimentoB += '• Clube certo – OK';
+                    $('body').append("<textarea hidden id='id_conteudo_B'></textarea>");
+					$('#id_conteudo_B').val(preenchimentoB);
+					if ($('#id_conteudo_B').attr('contentEditable') === 'true')
+					{
+						$('#id_conteudo_B').html(preenchimentoB);
+					}
+					console.log('Campo B criado com Sucesso!');
+                    preenchimentoC += 'PÓS-VENDA VISITA TÉCNICA/ADEQUAÇÃO\n';
+                    preenchimentoC += 'Como você avalia o atendimento prestado pela empresa até o momento:\n';
+                    preenchimentoC += '(   )BOM (   ) RUIM – NOTA 10\n';
+                    preenchimentoC += 'A VISITA TÉCNICA foi feita de maneira correta?\n';
+                    preenchimentoC += '(  ) SIM (   ) NÃO\n';
+                    preenchimentoC += 'O atendimento e as informações passadas pelo técnico foi?\n';
+                    preenchimentoC += '(  ) BOM (   ) RUIM\n';
+                    preenchimentoC += 'Após a visita técnica, o problema foi solucionado?\n';
+                    preenchimentoC += '(  ) SIM (   ) NÃO\n';
+                    preenchimentoC += 'O novo plano atendeu a suas expectativas?\n';
+                    preenchimentoC += '(  ) SIM (   ) NÃO\n';
+                    preenchimentoC += 'Você indicaria nossos serviços?\n';
+                    preenchimentoC += '(  ) SIM (   ) NÃO\n';
+                    preenchimentoC += '• Benefício de indicação – OK\n';
+                    preenchimentoC += '• Aplicativo financeiro – OK\n';
+                    preenchimentoC += '• Informação financeiro – OK\n';
+                    preenchimentoC += '• Clube certo – OK';
+                    $('body').append("<textarea hidden id='id_conteudo_C'></textarea>");
+					$('#id_conteudo_C').val(preenchimentoC);
+					if ($('#id_conteudo_C').attr('contentEditable') === 'true')
+					{
+						$('#id_conteudo_C').html(preenchimentoC);
+					}
+					console.log('Campo C criado com Sucesso!');
 				}
                 else
 				{
-                    console.log('Campo Auxiliar com Erro ao ser criado');
+                    console.log('Não foi possivel criar os campos!');
                 }
 
             }, 0); // Espera 0,5 segundos antes de preencher os campos
