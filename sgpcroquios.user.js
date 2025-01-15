@@ -18,6 +18,8 @@ scriptHTML += "if($(this).val() == 123) {";
 scriptHTML += "$('#id_conteudo').val($('#id_conteudo_B').val());";
 scriptHTML += "} else if($(this).val() == 124) {";
 scriptHTML += "$('#id_conteudo').val($('#id_conteudo_C').val());";
+scriptHTML += "} else if($(this).val() == 5) {";
+scriptHTML += "$('#id_conteudo').val($('#id_conteudo_D').val());";
 scriptHTML += "} else {";
 scriptHTML += "$('#id_conteudo').val($('#id_conteudo_A').val());";
 scriptHTML += "}";
@@ -36,6 +38,7 @@ document.body.appendChild(scriptElem);
 		var preenchimentoA = '';
         var preenchimentoB = '';
         var preenchimentoC = '';
+		var peenchimentoD = '';
 		var cliente;
 		var idCliente;
 		var cpf_cnpj;
@@ -138,6 +141,18 @@ document.body.appendChild(scriptElem);
 						$('#id_conteudo_C').html(preenchimentoC);
 					}
 					console.log('Campo C criado com Sucesso!');
+					preenchimentoD += 'SERVIÇO DE REDE \n';
+					preenchimentoD += 'Endereço: \n';
+					preenchimentoD += 'Relato: \n';
+					preenchimentoD += 'Serviço: \n';
+					preenchimentoD += 'Obs: ';					
+                    			$('body').append("<textarea hidden id='id_conteudo_D'></textarea>");
+					$('#id_conteudo_D').val(preenchimentoD);
+					if ($('#id_conteudo_D').attr('contentEditable') === 'true')
+					{
+						$('#id_conteudo_D').html(preenchimentoD);
+					}
+					console.log('Campo D criado com Sucesso!');
 				}
                 else
 				{
