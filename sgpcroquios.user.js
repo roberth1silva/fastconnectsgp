@@ -38,7 +38,7 @@ document.body.appendChild(scriptElem);
 		var preenchimentoA = '';
         var preenchimentoB = '';
         var preenchimentoC = '';
-		var peenchimentoD = '';
+		var preenchimentoD = '';
 		var cliente;
 		var idCliente;
 		var cpf_cnpj;
