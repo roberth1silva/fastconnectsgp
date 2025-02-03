@@ -18,7 +18,7 @@ scriptHTML += "if($(this).val() == 123) {";
 scriptHTML += "$('#id_conteudo').val($('#id_conteudo_B').val());";
 scriptHTML += "} else if($(this).val() == 124) {";
 scriptHTML += "$('#id_conteudo').val($('#id_conteudo_C').val());";
-scriptHTML += "} else if($(this).val() == 5) {";
+scriptHTML += "} else if($(this).val() == 131) {";
 scriptHTML += "$('#id_conteudo').val($('#id_conteudo_D').val());";
 scriptHTML += "} else {";
 scriptHTML += "$('#id_conteudo').val($('#id_conteudo_A').val());";
