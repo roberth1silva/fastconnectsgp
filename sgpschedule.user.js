@@ -63,7 +63,7 @@ $(document).ready(function(){
             let hour = elementOS.children().eq(0).html();
             if(hour.split(":")[0] > 12 && splitDay == false)
             {
-                $(this).prev().after("<tr class='fc-list-day fc-day fc-day-fri fc-day-today fc-separador'><th style='background: #E9D502; color: #E9D502;' colspan='4'>Separador</th></tr>");
+                $(this).prev().after("<tr class='fc-list-day fc-day fc-day-fri fc-day-today fc-separador'><th style='background: #E9D502; color: #E9D502; height: 7px;' colspan='4'></th></tr>");
                 splitDay = true;
             }
             let elementDot = $(this).children().eq(1).children();
