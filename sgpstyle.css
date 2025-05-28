@@ -1,12 +1,150 @@
-.flex
-{
+.main-calendar {
   display: flex;
+  justify-content: center;
 }
-.flex-wrap
-{
+
+.table {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
   flex-wrap: wrap;
+  align-items: flex-start;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background-color: #fff;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
-.mb-space
-{
-  margin-bottom: 50px;
+
+.title {
+  width: 100%;
+  font-size: 18px;
+  font-weight: bold;
+  color: #333;
+  padding: 10px;
+}
+
+.morning,
+.afternoon {
+  background-color: #e2e3e5;
+  width: 100%;
+  font-size: 14px;
+  font-weight: bold;
+  color: #41464b;
+  border-bottom: 1px solid #d3d6d8;
+  padding: 10px;
+}
+
+.service {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  padding: 10px;
+  align-items: center;
+  align-content: center;
+  border-bottom: 1px solid #d3d6d8;
+}
+
+.service:hover {
+  background-color: #f3f3f3;
+}
+
+.service-status {
+  width: 10%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.status {
+  width: 70%;
+  display: flex;
+  align-items: center;
+  text-align: center;
+  justify-content: center;
+  padding: 7px 10px;
+  border-radius: 10px;
+  font-weight: bold;
+}
+
+.finished {
+  background-color: #e5e7eb;
+  color: #4c4c4c;
+  border: 1px solid #4c4c4c;
+}
+
+.open {
+  background-color: #dbeafe;
+  color: #3788d8;
+  border: 1px solid #3788d8;
+}
+
+.executing {
+  background-color: #fff3cd;
+  color: #664d03;
+  border: 1px solid #664d03;
+}
+
+.service-time {
+  width: 5%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 7px 10px;
+}
+
+.service-customer {
+  width: 23%;
+  padding: 7px 10px;
+}
+
+.service-employee {
+  width: 12%;
+  padding: 7px 10px;
+}
+
+.service-observation {
+  width: 15%;
+  padding: 7px 10px;
+}
+
+.service-location {
+  width: 20%;
+  padding: 7px 10px;
+}
+
+.service-action {
+  width: 5%;
+  padding: 7px 10px;
+}
+
+.btn {
+  display: inline-block;
+  font-weight: bold;
+  color: #212529;
+  text-align: center;
+  text-decoration: none;
+  vertical-align: middle;
+  cursor: pointer;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+  background-color: transparent;
+  border: 1px solid transparent;
+  padding: .375rem .75rem;
+  font-size: 1rem;
+  border-radius: .25rem;
+  transition: color .15s ease-in-out, background-color .15s ease-in-out, border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+}
+
+.btn-dark {
+  color: #fff;
+  background-color: #212529;
+  border-color: #212529;
+}
+
+.btn-dark:hover {
+  color: #fff;
+  background-color: #545b65;
+  border-color: #545b65;
 }
