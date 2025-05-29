@@ -224,13 +224,13 @@
 
 .search-button
 {
-  padding: 7px;
+  padding: 8px;
   color: #ccc;
 }
 
 .search-button > i
 {
-  font-size: 1.1rem;
+  font-size: 1.2rem;
 }
 
 .search-input {
