@@ -195,6 +195,7 @@
   padding: 5px;
   border: 1px solid #ccc;
   border-radius: 3px;  
+  color: #757575;
 }
 
 .prev-week
@@ -233,11 +234,10 @@
 }
 
 .search-input {
-  border: none;
-  padding: 7px;
-  border-radius: 0 5px 5px 0;
-  width: 300px;
-  outline: none;
-  font-size: 1.1rem;
-  box-shadow: none;
+  border: none !important;
+  padding: 7px !important;
+  width: 300px !important;
+  outline: none !important;
+  font-size: 1.1rem !important;
+  box-shadow: none !important;
 }
