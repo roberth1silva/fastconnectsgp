@@ -185,5 +185,11 @@
 .prev-week,
 .next-week
 {
+  padding: 5px;
+}
+
+.prev-week.fc-icon,
+.next-week.fc-icon
+{
   font-size: 1.5rem;
 }
