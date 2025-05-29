@@ -60,6 +60,7 @@
 
 .service:hover {
   background-color: #f3f3f3;
+  color: #212121;
 }
 
 .service-status {
