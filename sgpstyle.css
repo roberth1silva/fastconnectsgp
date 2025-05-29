@@ -193,10 +193,21 @@
 .next-week
 {
   padding: 5px;
+  border: 1px solid #ccc;
+  border-radius: 3px;  
 }
 
-.prev-week.fc-icon,
-.next-week.fc-icon
+.prev-week
+{
+  margin-right: 3px;
+}
+.next-week
+{
+  margin-left: 3px;
+}
+
+.prev-week > .fc-icon,
+.next-week > .fc-icon
 {
   font-size: 1.5rem;
 }
