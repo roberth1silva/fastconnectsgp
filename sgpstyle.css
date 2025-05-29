@@ -221,11 +221,23 @@
   border-radius: 5px;
 }
 
+.search-button
+{
+  padding: 7px;
+  color: #ccc;
+}
+
+.search-button > i
+{
+  font-size: 1.1rem;
+}
+
 .search-input {
   border: none;
-  padding: 10px;
+  padding: 7px;
   border-radius: 0 5px 5px 0;
   width: 300px;
   outline: none;
   font-size: 1.1rem;
+  box-shadow: none;
 }
