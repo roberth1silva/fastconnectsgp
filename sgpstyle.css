@@ -29,6 +29,13 @@
   padding: 10px;
 }
 
+.period
+{
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+}
+
 .morning,
 .afternoon {
   background-color: #e2e3e5;
