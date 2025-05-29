@@ -6,3 +6,15 @@
   background-color: #f3f3f3;
   color: #212121;
 }
+
+.btn-dark {
+  color: #fff;
+  background-color: #545b65;
+  border-color: #545b65;
+}
+
+.btn-dark:hover {
+  color: #fff;
+  background-color: #212529;
+  border-color: #212529;
+}
