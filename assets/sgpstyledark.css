@@ -22,3 +22,36 @@
 .title {
   color: white;
 }
+
+.search-input {
+  background-color: #212121;
+  color: #fff;
+}
+
+.morning, 
+.afternoon {
+  background-color: #393939;
+  color: #fff;
+}
+
+.search-button {    
+  color: #fff;
+}
+
+.modal-content {
+  background-color: #212121;
+  color: #fff;  
+}
+
+.icon-text {
+  color: #fff;
+}
+
+.modal-left .modal-text-gray
+{
+  color: #fff;
+}
+
+.modal-left .modal-text {
+  color: #fff;
+}
