@@ -98,7 +98,7 @@
 }
 
 .service-time {
-  width: 5%;
+  width: 3%;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -106,7 +106,7 @@
 }
 
 .service-customer {
-  width: 23%;
+  width: 20%;
   padding: 7px 10px;
 }
 
@@ -116,7 +116,7 @@
 }
 
 .service-observation {
-  width: 15%;
+  width: 20%;
   padding: 7px 10px;
 }
 
