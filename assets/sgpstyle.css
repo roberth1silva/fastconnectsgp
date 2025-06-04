@@ -353,3 +353,77 @@
 .report-problem {
   padding-left: 25px;
 }
+
+.month-calendar {
+      display: grid;      
+    }
+    .row-week {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      background-color: #4CAF50;            
+    }
+    .row-week > div {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      flex-wrap: wrap;
+      padding: 10px;
+    }
+    .row-week > div > span {
+      text-align: center;
+      color: white;
+      font-weight: bold;
+    }
+    .row-day {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      background-color: #fff;      
+    }
+    .row-day > div {
+      height: 125px;
+      display: flex;
+      flex-direction: column;
+      flex-wrap: wrap;
+      justify-content: flex-start;
+      align-items: center;
+      text-align: center;
+      padding: 10px;
+      border: 1px solid #ddd;
+      transition: background-color 0.3s;
+    }
+    .row-day > div:hover {
+      background-color: #f0f0f0;
+    }
+    .row-day > div > span {
+      width: 100%;
+      text-align: center;
+    }
+    .row-day > div > div {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 5px;
+    }
+    .row-day > div > div > span {
+      text-align: left;
+      width: 80%;
+      margin: 2px 0;
+      padding: 2px 5px;
+      text-align: left;
+    }
+    .day-open {
+      background-color: #dbeafe;
+      color: #3788d8;
+      border: 1px solid #3788d8;
+    }
+    .day-status 
+    {
+      width: 70%;
+      display: flex;
+      align-items: center;      
+      justify-content: center;
+      padding: 7px 10px;
+      border-radius: 10px;
+      font-weight: bold;
+    }
