@@ -1,3 +1,7 @@
+body
+{
+  overflow-y: visible;
+}
 .main-calendar {
   display: flex;
   justify-content: center;
