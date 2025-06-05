@@ -465,9 +465,20 @@
   background-color: #f9eab8 !important;
 }
 
-.btn-list-active
+.btn-active-view
 {  
     background-color: #3788d8;
     color: white;
     border-color: #0a76e1;
 }
+.btn-active-view:hover
+{  
+    background-color: #0a76e1;
+    color: white;
+    border-color: #3788d8;
+}
+.btn-active-view:focus
+{  
+    scale: 0.95;
+}
+
