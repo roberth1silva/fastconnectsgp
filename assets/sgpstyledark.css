@@ -60,9 +60,11 @@
 {
   background-color: #212121 !important;
 }
+
 .calendar-day-holiday {
   color: black !important;
 }
+
 .row-day>div:hover {
     color: black !important;
 }
