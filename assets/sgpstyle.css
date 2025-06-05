@@ -361,7 +361,8 @@
 .row-week {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  background-color: #4CAF50;
+  background-color: #e2e3e5;
+  border-radius: 10px 10px 0px 0px;
 }
 
 .row-week>div {
