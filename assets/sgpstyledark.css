@@ -19,13 +19,13 @@
   border-color: #212529;
 }
 
-.title {
+.title, .title-week, .title-month {
   color: white;
 }
 
 .search-input {
-  background-color: #212121;
-  color: #fff;
+  background-color: #212121 !important;
+  color: #fff !important;
 }
 
 .morning, 
@@ -54,4 +54,15 @@
 
 .modal-left .modal-text {
   color: #fff;
+}
+
+.row-day
+{
+  color: #212121 !important;
+}
+.calendar-day-holiday {
+  color: black !important;
+}
+.row-day>div:hover {
+    color: black !important;
 }
