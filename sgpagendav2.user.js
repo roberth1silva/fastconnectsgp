@@ -24,10 +24,6 @@ let currentIndex = 0;
 let weekKeys = [];
 let currentMonthDate = new Date();
 
-const username = '';
-const password = '';
-const basicAuth = 'Basic ' + btoa(username + ':' + password);
-
 function formatarSemanaLabel(weekKey) {
     const [ano, semana] = weekKey.split('-W').map(Number);
 
@@ -568,11 +564,7 @@ async function fetchDataFromAPI(id) {
     return new Promise(resolve => {
         $.ajax({
             url: `https://fastconnect.sgp.net.br/api/os/list/id/${id}`,
-            method: 'POST',
-            headers: {
-                'Authorization': basicAuth,
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
+            method: 'POST',           
             success: data => resolve(data || {}),
             error: err => {
                 console.error('Erro ao buscar dados:', err);
