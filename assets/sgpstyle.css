@@ -460,6 +460,7 @@
 .calendar-day-holiday {
   background-color: #fff3cd;
 }
+
 .calendar-day-holiday:hover
 {
   background-color: #f9eab8 !important;
