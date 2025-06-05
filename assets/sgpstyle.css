@@ -478,7 +478,9 @@
     border-color: #3788d8;
 }
 
-.btn-active-view:focus
+.btn-active-view:active, 
+.prev-week:active, 
+.next-week:active
 {  
     scale: 0.95;
 }
