@@ -453,5 +453,5 @@
 }
 .calendar-day-holiday:hover
 {
-  background-color: #f9eab8;
+  background-color: #f9eab8 !important;
 }
