@@ -58,7 +58,7 @@
 
 .row-day
 {
-  color: #212121 !important;
+  background-color: #212121 !important;
 }
 .calendar-day-holiday {
   color: black !important;
