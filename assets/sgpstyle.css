@@ -15,7 +15,8 @@
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.week-block, .day-block {
+.week-block,
+.day-block {
   width: 100%;
   display: flex;
   flex-wrap: wrap;
@@ -198,8 +199,7 @@
   color: #757575;
 }
 
-.btn-disabled
-{
+.btn-disabled {
   background-color: #f0f0f0;
   opacity: 0.6;
   cursor: not-allowed;
@@ -355,75 +355,103 @@
 }
 
 .month-calendar {
-      display: grid;      
-    }
-    .row-week {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      background-color: #4CAF50;            
-    }
-    .row-week > div {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      flex-wrap: wrap;
-      padding: 10px;
-    }
-    .row-week > div > span {
-      text-align: center;
-      color: white;
-      font-weight: bold;
-    }
-    .row-day {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      background-color: #fff;      
-    }
-    .row-day > div {
-      height: 125px;
-      display: flex;
-      flex-direction: column;
-      flex-wrap: wrap;
-      justify-content: flex-start;
-      align-items: center;
-      text-align: center;
-      padding: 10px;
-      border: 1px solid #ddd;
-      transition: background-color 0.3s;
-    }
-    .row-day > div:hover {
-      background-color: #f0f0f0;
-    }
-    .row-day > div > span {
-      width: 100%;
-      text-align: center;
-    }
-    .row-day > div > div {
-      width: 100%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      margin-top: 5px;
-    }
-    .row-day > div > div > span {
-      text-align: left;
-      width: 80%;
-      margin: 2px 0;
-      padding: 2px 5px;
-      text-align: left;
-    }
-    .day-open {
-      background-color: #dbeafe;
-      color: #3788d8;
-      border: 1px solid #3788d8;
-    }
-    .day-status 
-    {
-      width: 70%;
-      display: flex;
-      align-items: center;      
-      justify-content: center;
-      padding: 7px 10px;
-      border-radius: 10px;
-      font-weight: bold;
-    }
+  display: grid;
+}
+
+.row-week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background-color: #4CAF50;
+}
+
+.row-week>div {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex-wrap: wrap;
+  padding: 10px;
+}
+
+.row-week>div>span {
+  text-align: center;
+  color: white;
+  font-weight: bold;
+}
+
+.row-day {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background-color: #fff;
+}
+
+.row-day>div {
+  height: 125px;
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  align-items: center;
+  text-align: center;
+  padding: 10px;
+  border: 1px solid #ddd;
+  transition: background-color 0.3s;
+}
+
+.row-day>div:hover {
+  background-color: #f0f0f0;
+}
+
+.row-day>div>span {
+  width: 100%;
+  text-align: center;
+}
+
+.row-day>div>div {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 5px;
+}
+
+.row-day>div>div>span {
+  text-align: left;
+  margin: 2px 0;
+  text-align: left;
+}
+
+.day-status {
+  width: 80%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 10px;
+  border-radius: 5px;
+  font-weight: bold;
+}
+
+.day-open {
+  background-color: #dbeafe;
+  color: #3788d8;
+  border: 1px solid #3788d8;
+}
+
+.day-finished {
+  background-color: #e5e7eb;
+  color: #4c4c4c;
+  border: 1px solid #4c4c4c;
+}
+
+.day-holiday {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #721c24;
+}
+
+.calendar-day-holiday {
+  background-color: #fff3cd;
+}
+.calendar-day-holiday:hover
+{
+  background-color: #f9eab8;
+}
