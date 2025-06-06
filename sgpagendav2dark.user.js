@@ -18,6 +18,7 @@
 
 /* global $ */
 
+
 const groupedByWeek = {};
 const allInfo = [];
 const situationDay = {};
