@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SGP Agenda Plus & Design v2 - Dark
 // @namespace    http://tampermonkey.net/
-// @version      2.4
+// @version      2.6
 // @description  SGP Agenda Plus & Design v2 - Dark
 // @author       Roberth
 // @match        https://fastconnect.sgp.net.br/admin/atendimento/agenda/view/*
@@ -479,7 +479,7 @@ function pushInfo(id, situacao, tecnicos, motivo, conteudo)
     if (allInfo.find(i => i.id == id)) {
         return;
     }
-    $.get(`https://fastconnect.sgp.net.br/admin/atendimento/os/${id}/agenda/evento/`, function(html) {
+    $.get(`/admin/atendimento/os/${id}/agenda/evento/`, function(html) {
         const tempDOM = $("<div>").html(html);
         const tds = tempDOM.find("table td");
         const ocorrenciaText = $(tds[1]).text().trim();
@@ -565,7 +565,7 @@ function appendService(ev, containerId) {
 async function fetchDataFromAPI(id) {
     return new Promise(resolve => {
         $.ajax({
-            url: `https://fastconnect.sgp.net.br/api/os/list/id/${id}`,
+            url: `/api/os/list/id/${id}`,
             method: 'POST',            
             success: data => resolve(data || {}),
             error: err => {
