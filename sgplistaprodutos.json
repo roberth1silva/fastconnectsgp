@@ -55,8 +55,6 @@
       "ONT NOKIA G-140W-MF (CHINA MOBILE)",
       "ONT NOKIA G-240W-G",
       "ONT STAVIX AC1200",
-      "ONT TPLINK XC220-G3V PRETA",
-      "ONT TPLINK XX230V AX1800 WIFI 6",
       "ONT VSOL FD604GW - FLYTEC PRETA 4 ANTENAS",
       "ONT ZTE EGX128 - FLYTEC PRETA 4 ANTENAS",
       "ONT ZTE F6600 AX1800 GPON WIFI",
@@ -66,16 +64,18 @@
     "quantidadeMinima": 6
   },
   {
-    "grupo": "ONT TPLINK XC220-G3 BRANCA",
+    "grupo": "ONT TPLINK XC220",
     "nomes": [
-      "ONT TPLINK XC220-G3 BRANCA"
+      "ONT TPLINK XC220-G3 BRANCA",
+      "ONT TPLINK XC220-G3V PRETA"
     ],
     "quantidadeMinima": 16
   },
   {
-    "grupo": "ONT TPLINK XX530V AX3000 WIFI 6",
+    "grupo": "ONT TPLINK XX530V/XX230V",
     "nomes": [
-      "ONT TPLINK XX530V AX3000 WIFI 6"
+      "ONT TPLINK XX530V AX3000 WIFI 6",
+      "ONT TPLINK XX230V AX1800 WIFI 6"
     ],
     "quantidadeMinima": 16
   },
@@ -154,7 +154,7 @@
     "quantidadeMinima": 151
   },
   {
-    "grupo": "CONECTOR APC",
+    "grupo": "CONECTOR UPC",
     "nomes": [
       "CONECTOR PARA FIBRA OPTICA SC/UPC AZUL",
       "CONECTOR SC UPC ALIEXPRESS",
