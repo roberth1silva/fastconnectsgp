@@ -1,42 +1,270 @@
 [
   {
-    "id": "103",
-    "nome": "SWITCH TPLINK 5P GIGABIT",
+    "grupo": "ONUs",
+    "nomes": [
+      "ONU BRIDGE CIANET",
+      "ONU BRIDGE ELSYS",
+      "ONU BRIDGE FIBERHOME 2 PORTAS",
+      "ONU BRIDGE FIBERHOME AN5506-01-A GPON",
+      "ONU BRIDGE FIBERSMART",
+      "ONU BRIDGE INTELBRAS 110B",
+      "ONU BRIDGE INTELBRAS 110 (RETANGULAR)",
+      "ONU BRIDGE MULTILASER PRO RE880",
+      "ONU BRIDGE MULTILASER ZTE F601V7",
+      "ONU BRIDGE MULTITECK APC",
+      "ONU BRIDGE MULTITECK UPC",
+      "ONU BRIDGE NOKIA I-010G",
+      "ONU BRIDGE SHORELINE",
+      "ONU BRIDGE TENDA BRANCA G103V3 GPON",
+      "ONU BRIDGE TENDA PRETA G103 GPON",
+      "ONU BRIDGE XPON",
+      "ONU BRIDGE ZTE BRANCA",
+      "ONU BRIDGE ZYXEL"
+    ],
+    "quantidadeMinima": 11
+  },
+  {
+    "grupo": "ONU BRIDGE/ROUTER HUAWEI",
+    "nomes": [
+      "ONU BRIDGE/ROUTER HUAWEI"
+    ],
     "quantidadeMinima": 6
   },
   {
-    "id": "188",
-    "nome": "ROTEADOR TPLINK EX141 AX1500",
+    "grupo": "ONU BRIDGE TPLINK PRETA",
+    "nomes": [
+      "ONU BRIDGE TPLINK PRETA"
+    ],
+    "quantidadeMinima": 6
+  },
+  {
+    "grupo": "ONTs",
+    "nomes": [
+      "ONT 4 PORTAS 2 ANTENAS",
+      "ONT CHIMA XPON AC1200",
+      "ONT EASY4LINK AC1200 GPON WIFI",
+      "ONT HUAWEI ECHOLIFE EG245W5-6T AC1200 BRANCA 4 ANTENAS",
+      "ONT HUAWEI ECHOLIFE EG245W5-6T AC1200 PRETA 4 ANTENAS",
+      "ONT HUAWEI ECHOLIFE HG8245Q2 (S/ANTENA)",
+      "ONT HUAWEI ECHOLIFE HS8546V5 (2 ANTENAS)",
+      "ONT INTELBRAS WIFIBER 1200R",
+      "ONT INTELBRAS WIFIBER 121 AC",
+      "ONT NOKIA G-140W-C BRANCA",
+      "ONT NOKIA G-140W-H",
+      "ONT NOKIA G-140W-ME",
+      "ONT NOKIA G-140W-MF (CHINA MOBILE)",
+      "ONT NOKIA G-240W-G",
+      "ONT STAVIX AC1200",
+      "ONT TPLINK XC220-G3V PRETA",
+      "ONT TPLINK XX230V AX1800 WIFI 6",
+      "ONT VSOL FD604GW - FLYTEC PRETA 4 ANTENAS",
+      "ONT ZTE EGX128 - FLYTEC PRETA 4 ANTENAS",
+      "ONT ZTE F6600 AX1800 GPON WIFI",
+      "ONT ZTE F660 CHINA",
+      "ONT ZTE F673AV9"
+    ],
+    "quantidadeMinima": 6
+  },
+  {
+    "grupo": "ONT TPLINK XC220-G3 BRANCA",
+    "nomes": [
+      "ONT TPLINK XC220-G3 BRANCA"
+    ],
+    "quantidadeMinima": 16
+  },
+  {
+    "grupo": "ONT TPLINK XX530V AX3000 WIFI 6",
+    "nomes": [
+      "ONT TPLINK XX530V AX3000 WIFI 6"
+    ],
+    "quantidadeMinima": 16
+  },
+  {
+    "grupo": "ROTEADORES AC1200",
+    "nomes": [
+      "ROTEADOR GREATEK GWR1200AC",
+      "ROTEADOR HUAWEI WS5200",
+      "ROTEADOR INTELBRAS RG1200",
+      "ROTEADOR INTELBRAS W5 1200G",
+      "ROTEADOR MERCUSYS AC12G",
+      "ROTEADOR MERCUSYS MR30G",
+      "ROTEADOR MERCUSYS MR50G",
+      "ROTEADOR TPLINK AC1350 C60",
+      "ROTEADOR TPLINK EC220",
+      "ROTEADOR ZTE RE914 AC1200 PRETO 2 ANTENAS"
+    ],
+    "quantidadeMinima": 6
+  },
+  {
+    "grupo": "ROTEADORES AX",
+    "nomes": [
+      "ROTEADOR HUAWEI AX2",
+      "ROTEADOR HUAWEI AX2S WI FI 6 PRETO",
+      "ROTEADOR MERCUSYS MR60X AX1500",
+      "ROTEADOR SHORELINE AX1500 LINE-X",
+      "ROTEADOR ZYXEL AX1800 Wi-Fi 6 MESH,PRESET E TR069"
+    ],
     "quantidadeMinima": 11
   },
   {
-    "id": "258",
-    "nome": "ROTEADOR TPLINK EX220 AX1800",
+    "grupo": "ROTEADORES TP LINK EX141/EX220",
+    "nomes": [
+      "ROTEADOR TPLINK EX141 AX1500",
+      "ROTEADOR TPLINK EX220 AX1800"
+    ],
     "quantidadeMinima": 11
   },
   {
-    "id": "183",
-    "nome": "ONT TPLINK XC220-G3 BRANCA",
-    "quantidadeMinima": 11
+    "grupo": "SWITCH GIGABIT",
+    "nomes": [
+      "SWITCH TPLINK 5P GIGABIT",
+      "SWITCH MERCUSYS 5P GIGABIT MS105G"
+    ],
+    "quantidadeMinima": 6
   },
   {
-    "id": "250",
-    "nome": "ONT TPLINK XX530V AX3000 WIFI 6",
-    "quantidadeMinima": 11
+    "grupo": "CABO UTP COBREADO BRANCO",
+    "nomes": [
+      "CABO UTP COBREADO BRANCO"
+    ],
+    "quantidadeMinima": 611
   },
   {
-    "id": "198",
-    "nome": "CONECTOR SC APC DE ROSCA GREATEK",
+    "grupo": "CABO DROP",
+    "nomes": [
+      "CABO 1FO DROP MPT",
+      "CABO DROP 1 FO ELGIN",
+      "CABO DROP 1 FO FIBRATECH",
+      "CABO DROP 1 FO TRANSCEND",
+      "CABO OPTICO 1FO DROP OPTIME"
+    ],
+    "quantidadeMinima": 5001
+  },
+  {
+    "grupo": "CONECTOR APC",
+    "nomes": [
+      "CONECTOR PARA FIBRA OPTICA SC/APC VERDE",
+      "CONECTOR SC APC ALIEXPRESS",
+      "CONECTOR SC APC DE ROSCA GREATEK",
+      "CONECTOR SC APC DE ROSCA INTELBRAS",
+      "CONECTOR SC APC DE ROSCA ISP",
+      "CONECTOR SC APC DE ROSCA PROELETRONIC",
+      "CONECTOR SC APC T CLICK MODESTO"
+    ],
+    "quantidadeMinima": 151
+  },
+  {
+    "grupo": "CONECTOR APC",
+    "nomes": [
+      "CONECTOR PARA FIBRA OPTICA SC/UPC AZUL",
+      "CONECTOR SC UPC ALIEXPRESS",
+      "CONECTOR SC UPC DE ROSCA GREATEK",
+      "CONECTOR SC UPC DE ROSCA ISP"
+    ],
+    "quantidadeMinima": 151
+  },
+  {
+    "grupo": "ACOPLADOR APC",
+    "nomes": [
+      "ACOPLADOR APC"
+    ],
     "quantidadeMinima": 21
   },
   {
-    "id": "266",
-    "nome": "CONECTOR SC UPC DE ROSCA GREATEK",
+    "grupo": "ACOPLADOR UPC",
+    "nomes": [
+      "ACOPLADOR UPC"
+    ],
     "quantidadeMinima": 21
   },
   {
-    "id": "159",
-    "nome": "FIXADOR FIO REFORÇADO MIGUELAO",
-    "quantidadeMinima": 301
-  }   
+    "grupo": "FIXADOR FIO REFORÇADO MIGUELAO",
+    "nomes": [
+      "FIXADOR FIO REFORÇADO MIGUELAO"
+    ],
+    "quantidadeMinima": 501
+  },
+  {
+    "grupo": "CONECTOR RJ45",
+    "nomes": [
+      "CONECTOR RJ45"
+    ],
+    "quantidadeMinima": 21
+  },
+  {
+    "grupo": "FITA ISOLANTE PVC PRETA 20 MTS",
+    "nomes": [
+      "FITA ISOLANTE PVC PRETA 20 MTS"
+    ],
+    "quantidadeMinima": 6
+  },
+  {
+    "grupo": "CTO",
+    "nomes": [
+      "CAIXA DE TERMINAÇÃO OPTICA COM SPLITTER SC- APC 1 X8 E",
+      "CTO 1X8 BOX DPR",
+      "CTO C/ SPLITTER 1X8 PROELETRONIC",
+      "CTO S/ SPLITTER"
+    ],
+    "quantidadeMinima": 4
+  },
+  {
+    "grupo": "SUPORTE CTO METALICO",
+    "nomes": [
+      "SUPORTE CTO METALICO"
+    ],
+    "quantidadeMinima": 6
+  },
+  {
+    "grupo": "CAIXA DE EMENDA",
+    "nomes": [
+      "CAIXA DE EMENDA 24FIBRAS FIBERSUL",
+      "CAIXA DE EMENDA 24FIBRAS NEW",
+      "CAIXA DE EMENDA 24FIBRAS SHORELINE",
+      "CAIXA DE EMENDA FIBRACEM"
+    ],
+    "quantidadeMinima": 3
+  },
+  {
+    "grupo": "FECHO DENTADO",
+    "nomes": [
+      "FECHO DENTADO"
+    ],
+    "quantidadeMinima": 21
+  },
+  {
+    "grupo": "OLHAL SOLDADO",
+    "nomes": [
+      "OLHAL SOLDADO PARA FITA FUSIMEC"
+    ],
+    "quantidadeMinima": 21
+  },
+  {
+    "grupo": "ALÇA PREFORMADA",
+    "nomes": [
+      "ALÇA PREFORMADA PARA FIBRA OPTICA BRANCA"
+    ],
+    "quantidadeMinima": 21
+  },
+  {
+    "grupo": "SUPA",
+    "nomes": [
+      "ISOLADOR/SUPORTE 3X1 SUPA PRETO FIBERSMART"
+    ],
+    "quantidadeMinima": 41
+  },
+  {
+    "grupo": "VASELINA",
+    "nomes": [
+      "VASELINA SOLIDA INDUSTRIAL VONDER"
+    ],
+    "quantidadeMinima": 2
+  },
+  {
+    "grupo": "GÁS BUTANO",
+    "nomes": [
+      "GÁS BUTANO REFIL PARA MAÇARICO"
+    ],
+    "quantidadeMinima": 1
+  }
 ]
