@@ -264,5 +264,12 @@
       "GÁS BUTANO REFIL PARA MAÇARICO"
     ],
     "quantidadeMinima": 1
+  },
+  {
+    "grupo": "FITA DE AÇO FUSIMEC",
+    "nomes": [
+      "FITA DE AÇO GALVANIZADO (CINTA LISA) FUSIMEC"
+    ],
+    "quantidadeMinima": 51
   }
 ]
