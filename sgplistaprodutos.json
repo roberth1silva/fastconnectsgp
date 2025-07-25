@@ -112,6 +112,13 @@
     "quantidadeMinima": 11
   },
   {
+    "grupo": "ROTEADOR HUAWEI AX3S",
+    "nomes": [
+      "ROTEADOR HUAWEI AX3S WI FI 6 PRETO"      
+    ],
+    "quantidadeMinima": 11
+  },  
+  {
     "grupo": "SWITCH GIGABIT",
     "nomes": [
       "SWITCH TPLINK 5P GIGABIT",
