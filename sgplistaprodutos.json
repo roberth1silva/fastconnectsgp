@@ -71,7 +71,8 @@
   {
     "grupo": "ONT TPLINK XX530V/XX230V",
     "nomes": [
-      "ONT TPLINK XX530V AX3000 WIFI 6",
+      "ONT TPLINK XX530V 4 ANTENAS AX3000 WIFI 6",
+      "ONT TPLINK XX530V2 2 ANTENAS AX3000 WIFI 6",
       "ONT TPLINK XX230V AX1800 WIFI 6"
     ],
     "quantidadeMinima": 16
