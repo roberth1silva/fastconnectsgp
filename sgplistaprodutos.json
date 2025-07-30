@@ -278,5 +278,47 @@
       "FITA DE AÇO GALVANIZADO (CINTA LISA) FUSIMEC"
     ],
     "quantidadeMinima": 51
-  }
+  },
+  {
+    "grupo": "CABO OPTICO AS80 06 FIBRAS",
+    "nomes": [
+      "CABO OPTICO AS80 06 FIBRAS"
+    ],
+    "quantidadeMinima": 2001
+  },
+  {
+    "grupo": "CABO OPTICO AS80 12 FIBRAS",
+    "nomes": [
+      "CABO OPTICO AS80 12 FIBRAS"
+    ],
+    "quantidadeMinima": 2001
+  },
+  {
+    "grupo": "CABO OPTICO AS80 24 FIBRAS",
+    "nomes": [
+      "CABO OPTICO AS80 24 FIBRAS"
+    ],
+    "quantidadeMinima": 1501
+  },
+  {
+    "grupo": "CABO OPTICO AS80 36 FIBRAS",
+    "nomes": [
+      "CABO OPTICO AS80 36 FIBRAS"
+    ],
+    "quantidadeMinima": 1001
+  },
+  {
+    "grupo": "CABO OPTICO AS80 48 FIBRAS",
+    "nomes": [
+      "CABO OPTICO AS80 48 FIBRAS"
+    ],
+    "quantidadeMinima": 1001
+  },
+  {
+    "grupo": "CABO OPTICO AS80 72 FIBRAS",
+    "nomes": [
+      "CABO OPTICO AS80 72 FIBRAS"
+    ],
+    "quantidadeMinima": 1001
+  }  
 ]
