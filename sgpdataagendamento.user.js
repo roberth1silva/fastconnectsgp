@@ -1,11 +1,13 @@
 // ==UserScript==
 // @name         SGP Data Agendamento
 // @namespace    http://tampermonkey.net/
-// @version      2.0
+// @version      2.1
 // @description  SGP Data Agendamento
 // @author       Roberth e Thiago
 // @match        https://fastconnect.sgp.net.br/admin/atendimento/agenda/view/*
+// @match        https://fastfibra.sgp.net.br/admin/atendimento/agenda/view/*
 // @match        https://sgp.fastconnect.net.br/admin/atendimento/agenda/view/*
+// @match        https://sgp.fastfibra.net.br/admin/atendimento/agenda/view/*
 // @match        http://45.164.128.5:8000/admin/atendimento/agenda/view/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=net.br
 // @require      https://code.jquery.com/jquery-3.7.1.min.js
