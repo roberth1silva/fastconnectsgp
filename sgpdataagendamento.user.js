@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SGP Data Agendamento
 // @namespace    http://tampermonkey.net/
-// @version      2.1
+// @version      2.2
 // @description  SGP Data Agendamento
 // @author       Roberth e Thiago
 // @match        https://fastconnect.sgp.net.br/admin/atendimento/agenda/view/*
