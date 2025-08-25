@@ -5,6 +5,9 @@
 // @description  Croqui OS
 // @author       Thiago
 // @match        https://fastconnect.sgp.net.br/admin/atendimento/cliente/*/ocorrencia/add/
+// @match        https://fastfibra.sgp.net.br/admin/atendimento/cliente/*/ocorrencia/add/
+// @match        https://sgp.fastconnect.net.br/admin/atendimento/cliente/*/ocorrencia/add/
+// @match        https://sgp.fastfibra.net.br/admin/atendimento/cliente/*/ocorrencia/add/
 // @match        http://45.164.128.5:8000/admin/atendimento/cliente/*/ocorrencia/add/
 // @match        https://45.164.128.5:8000/admin/atendimento/cliente/*/ocorrencia/add/
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=net.br
@@ -166,3 +169,4 @@ document.body.appendChild(scriptElem);
     // Chama a função para preencher o conteúdo
     preencherConteudo();
 })();
+
