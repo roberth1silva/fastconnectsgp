@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SGP Galeria
 // @namespace    http://tampermonkey.net/
-// @version      2025-08-25 1.1
+// @version      1.2
 // @description  SGP Galeria
 // @author       Roberth
 // @match        https://fastconnect.sgp.net.br/admin/atendimento/ocorrencia/os/*
@@ -87,5 +87,6 @@ $(document).ready(function(){
     $("#lg-rotate-left").html("<i class='light-icon fa fa-undo'></i>");
     $("#lg-rotate-right").html("<i class='light-icon fa fa-undo' style='-webkit-transform: scaleX(-1); transform: scaleX(-1);'></i>");
 });
+
 
 
