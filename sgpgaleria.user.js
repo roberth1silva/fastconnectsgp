@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         SGP Galeria
 // @namespace    http://tampermonkey.net/
-// @version      2025-01-02 1.0
+// @version      2025-08-25 1.1
 // @description  SGP Galeria
 // @author       Roberth
 // @match        https://fastconnect.sgp.net.br/admin/atendimento/ocorrencia/os/*
+// @match        https://fastfibra.sgp.net.br/admin/atendimento/ocorrencia/os/*
 // @match        http://45.164.128.5:8000/admin/atendimento/ocorrencia/os/*
 // @icon         data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==
 // @require      https://code.jquery.com/jquery-3.7.1.min.js
@@ -84,3 +85,4 @@ $(document).ready(function(){
     $("#lg-rotate-left").html("<i class='light-icon fa fa-undo'></i>");
     $("#lg-rotate-right").html("<i class='light-icon fa fa-undo' style='-webkit-transform: scaleX(-1); transform: scaleX(-1);'></i>");
 });
+
