@@ -5,7 +5,9 @@
 // @description  SGP Agenda Plus & Design v2 - Dark
 // @author       Roberth
 // @match        https://fastconnect.sgp.net.br/admin/atendimento/agenda/view/*
+// @match        https://fastfibra.sgp.net.br/admin/atendimento/agenda/view/*
 // @match        https://sgp.fastconnect.net.br/admin/atendimento/agenda/view/*
+// @match        https://sgp.fastfibra.net.br/admin/atendimento/agenda/view/*
 // @match        http://45.164.128.5:8000/admin/atendimento/agenda/view/*
 // @require      https://code.jquery.com/jquery-3.7.1.min.js
 // @grant        GM_getResourceText
