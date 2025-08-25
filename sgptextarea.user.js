@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SGP Textarea
 // @namespace    http://tampermonkey.net/
-// @version      2025-08-25
+// @version      1.2
 // @description  SGP Textarea
 // @author       Roberth
 // @match        https://fastconnect.sgp.net.br/admin/atendimento/ocorrencia/os/*
@@ -19,5 +19,6 @@ $('#id_conteudo').height(innerHeight_conteudo);
 
 var innerHeight_servicoprestado = $('#id_servicoprestado').prop('scrollHeight');
 $('#id_servicoprestado').height(innerHeight_servicoprestado);
+
 
 
