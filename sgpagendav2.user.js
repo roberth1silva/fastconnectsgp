@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SGP Agenda Plus & Design v2
 // @namespace    http://tampermonkey.net/
-// @version      2.7
+// @version      2.8
 // @description  SGP Agenda Plus & Design v2
 // @author       Roberth
 // @match        https://fastconnect.sgp.net.br/admin/atendimento/agenda/view/*
