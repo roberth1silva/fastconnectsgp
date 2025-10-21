@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SGP Agenda Plus & Design v2 - Dark
 // @namespace    http://tampermonkey.net/
-// @version      2.7
+// @version      2.8
 // @description  SGP Agenda Plus & Design v2 - Dark
 // @author       Roberth
 // @match        https://fastconnect.sgp.net.br/admin/atendimento/agenda/view/*
@@ -765,11 +765,21 @@ function initAfterGroupedReady() {
 async function renderWeekFull() {
     weekKeys = Object.keys(groupedByWeek).sort();
     currentIndex = weekKeys.indexOf(currentWeekKey);
+    var outras = weekKeys.filter(k => k !== currentWeekKey).reverse();
 
-    await renderWeek(currentWeekKey, groupedByWeek[currentWeekKey]);
-    showWeek(currentIndex);
-
-    const outras = weekKeys.filter(k => k !== currentWeekKey).reverse();
+    if(groupedByWeek[currentWeekKey])
+    {
+        await renderWeek(currentWeekKey, groupedByWeek[currentWeekKey]);
+        showWeek(currentIndex);
+    }
+    else
+    {
+        const newWeekKey = outras[0]
+        const newIndex = weekKeys.indexOf(newWeekKey);
+        await renderWeek(newWeekKey, groupedByWeek[newWeekKey]);
+        showWeek(newIndex);
+        outras = outras.filter(k => k !== newWeekKey);
+    }
 
     for (const key of outras) {
 
