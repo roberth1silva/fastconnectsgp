@@ -765,11 +765,21 @@ function initAfterGroupedReady() {
 async function renderWeekFull() {
     weekKeys = Object.keys(groupedByWeek).sort();
     currentIndex = weekKeys.indexOf(currentWeekKey);
+    var outras = weekKeys.filter(k => k !== currentWeekKey).reverse();
 
-    await renderWeek(currentWeekKey, groupedByWeek[currentWeekKey]);
-    showWeek(currentIndex);
-
-    const outras = weekKeys.filter(k => k !== currentWeekKey).reverse();
+    if(groupedByWeek[currentWeekKey])
+    {
+        await renderWeek(currentWeekKey, groupedByWeek[currentWeekKey]);
+        showWeek(currentIndex);
+    }
+    else
+    {
+        const newWeekKey = outras[0]
+        const newIndex = weekKeys.indexOf(newWeekKey);
+        await renderWeek(newWeekKey, groupedByWeek[newWeekKey]);
+        showWeek(newIndex);
+        outras = outras.filter(k => k !== newWeekKey);
+    }
 
     for (const key of outras) {
 
