@@ -137,11 +137,12 @@
   {
     "grupo": "CABO DROP",
     "nomes": [
-      "CABO 1FO DROP MPT",
-      "CABO DROP 1 FO ELGIN",
-      "CABO DROP 1 FO FIBRATECH",
-      "CABO DROP 1 FO TRANSCEND",
-      "CABO OPTICO 1FO DROP OPTIME"
+      "CABO DROP 1FO ELGIN",
+      "CABO DROP 1FO FIBRATECH",
+      "CABO DROP 1FO MPT",
+      "CABO DROP 1FO OPTICTIMES",
+      "CABO DROP 1FO OPTIME",
+      "CABO DROP 1FO TRANSCEND"
     ],
     "quantidadeMinima": 5001
   },
