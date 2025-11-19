@@ -142,7 +142,8 @@
       "CABO DROP 1FO MPT",
       "CABO DROP 1FO OPTICTIMES",
       "CABO DROP 1FO OPTIME",
-      "CABO DROP 1FO TRANSCEND"
+      "CABO DROP 1FO TRANSCEND",
+      "CABO DROP 1FO NEXT"
     ],
     "quantidadeMinima": 5001
   },
