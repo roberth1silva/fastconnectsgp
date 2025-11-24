@@ -105,10 +105,11 @@
     "quantidadeMinima": 11
   },
   {
-    "grupo": "ROTEADORES TP LINK EX141/EX220",
+    "grupo": "ROTEADORES TP LINK EX141/EX220/EX521",
     "nomes": [
       "ROTEADOR TPLINK EX141 AX1500",
-      "ROTEADOR TPLINK EX220 AX1800"
+      "ROTEADOR TPLINK EX220 AX1800",
+      "ROTEADOR TPLINK EX521 AX3000"
     ],
     "quantidadeMinima": 11
   },
