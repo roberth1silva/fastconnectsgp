@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         Preenchimento OS
 // @namespace    http://tampermonkey.net/
-// @version      3.3
+// @version      3.4
 // @description  Croqui OS
-// @author       Thiago
+// @author       Roberth e Thiago
 // @match        https://fastconnect.sgp.net.br/admin/atendimento/cliente/*/ocorrencia/add/
 // @match        https://fastfibra.sgp.net.br/admin/atendimento/cliente/*/ocorrencia/add/
 // @match        https://sgp.fastconnect.net.br/admin/atendimento/cliente/*/ocorrencia/add/
@@ -95,14 +95,10 @@ document.body.appendChild(scriptElem);
 					{
 						$('#id_conteudo_A').html(preenchimentoA);
 					}
-					console.log('Campo A criado com Sucesso!');
+					console.log('Campo A criado com Sucesso!');	
                     preenchimentoB += 'Pós-venda INSTALAÇÃO/TRANSFERÊNCIA\n';
-                    preenchimentoB += 'Como você avalia o atendimento prestado pela empresa até o momento:\n';
-                    preenchimentoB += '(   ) BOM (   ) RUIM – NOTA 10\n';
-                    preenchimentoB += 'A INSTALAÇÃO foi feita de maneira correta?\n';
+                    preenchimentoB += 'A INSTALAÇÃO foi feita de forma correta e o técnico fez um bom atendimento?\n';
                     preenchimentoB += '(   ) SIM (   ) NÃO\n';
-                    preenchimentoB += 'O atendimento e as informações passadas pelo técnico foi?\n';
-                    preenchimentoB += '(   ) BOM (   ) RUIM\n';
                     preenchimentoB += 'Os equipamentos foram instalados no local solicitado?\n';
                     preenchimentoB += '(   ) SIM (   ) NÃO\n';
                     preenchimentoB += 'O nosso serviço atendeu a suas expectativas?\n';
@@ -110,9 +106,10 @@ document.body.appendChild(scriptElem);
                     preenchimentoB += 'Você indicaria nossos serviços?\n';
                     preenchimentoB += '(   ) SIM (   ) NÃO\n';
                     preenchimentoB += '• Benefício de indicação – OK\n';
-                    preenchimentoB += '• Aplicativo financeiro – OK\n';
-                    preenchimentoB += '• Informação financeiro – OK\n';
-                    preenchimentoB += '• Clube certo – OK';
+                    preenchimentoB += '• Informação/Aplicativo financeiro – OK\n';
+                    preenchimentoB += '• Instagram – OK\n';
+                    preenchimentoB += '• Clube certo – OK\n';
+					preenchimentoB += 'Pesquisa respondida por';
                     $('body').append("<textarea hidden id='id_conteudo_B'></textarea>");
 					$('#id_conteudo_B').val(preenchimentoB);
 					if ($('#id_conteudo_B').attr('contentEditable') === 'true')
@@ -120,13 +117,9 @@ document.body.appendChild(scriptElem);
 						$('#id_conteudo_B').html(preenchimentoB);
 					}
 					console.log('Campo B criado com Sucesso!');
-                    preenchimentoC += 'PÓS-VENDA VISITA TÉCNICA/ADEQUAÇÃO\n';
-                    preenchimentoC += 'Como você avalia o atendimento prestado pela empresa até o momento:\n';
-                    preenchimentoC += '(   )BOM (   ) RUIM – NOTA 10\n';
-                    preenchimentoC += 'A VISITA TÉCNICA foi feita de maneira correta?\n';
+                    preenchimentoC += 'PÓS-VENDA VISITA TÉCNICA/ADEQUAÇÃO\n';                    
+                    preenchimentoC += 'A VISITA TÉCNICA foi feita de forma correta e o técnico fez um bom atendimento?\n';
                     preenchimentoC += '(  ) SIM (   ) NÃO\n';
-                    preenchimentoC += 'O atendimento e as informações passadas pelo técnico foi?\n';
-                    preenchimentoC += '(  ) BOM (   ) RUIM\n';
                     preenchimentoC += 'Após a visita técnica, o problema foi solucionado?\n';
                     preenchimentoC += '(  ) SIM (   ) NÃO\n';
                     preenchimentoC += 'O novo plano atendeu a suas expectativas?\n';
@@ -134,9 +127,10 @@ document.body.appendChild(scriptElem);
                     preenchimentoC += 'Você indicaria nossos serviços?\n';
                     preenchimentoC += '(  ) SIM (   ) NÃO\n';
                     preenchimentoC += '• Benefício de indicação – OK\n';
-                    preenchimentoC += '• Aplicativo financeiro – OK\n';
-                    preenchimentoC += '• Informação financeiro – OK\n';
-                    preenchimentoC += '• Clube certo – OK';
+                    preenchimentoC += '• Informação/Aplicativo financeiro – OK\n';
+                    preenchimentoC += '• Instagram – OK\n';
+                    preenchimentoC += '• Clube certo – OK\n';
+					preenchimentoC += 'Pesquisa respondida por';
                     $('body').append("<textarea hidden id='id_conteudo_C'></textarea>");
 					$('#id_conteudo_C').val(preenchimentoC);
 					if ($('#id_conteudo_C').attr('contentEditable') === 'true')
