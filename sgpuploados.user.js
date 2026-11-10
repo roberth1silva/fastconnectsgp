@@ -2,7 +2,7 @@
 // ==UserScript==
 // @name         SGP - Upload Anexos OS
 // @namespace    local.os.upload
-// @version      1.0.0
+// @version      1.1.0
 // @author       Roberth
 // @description  Upload múltiplo de anexos com arrastar e soltar
 // @match        *://*/admin/atendimento/ocorrencia/*
@@ -18,29 +18,37 @@
     // Evita duplicar a interface.
     if (document.getElementById(ID)) return;
 
-    // Localiza o título "Anexos".
+    // Localiza a estrutura da ocorrência.
     const osContainer = document.querySelector('#os-assinaturas');
     if (!osContainer) return;
 
-    const anexosTitle = [...osContainer.querySelectorAll('.add_title_sub')]
-        .find(el => el.textContent.trim().includes('Anexos'));
+    // Localiza o título de anexos.
+    const anexosTitle = [
+        ...osContainer.querySelectorAll('.add_title_sub')
+    ].find(el => el.textContent.trim().includes('Anexos'));
 
     if (!anexosTitle) return;
 
-    // Descobre o endpoint usando o link original.
-    const addLink = anexosTitle.querySelector(
+    // Localiza o link original do formulário de anexos.
+    const addLink = osContainer.querySelector(
+        'a[href*="/anexo/add/"]'
+    ) || anexosTitle.querySelector(
         'a[href*="/anexo/add/"]'
     );
 
-    if (!addLink) return;
+    if (!addLink) {
+        console.warn('[OS Upload] Link /anexo/add/ não encontrado.');
+        return;
+    }
 
     const uploadUrl = new URL(addLink.href, location.href).href;
 
     const files = [];
     let uploading = false;
 
-    // Estilos
+    // Estilos.
     const style = document.createElement('style');
+
     style.textContent = `
         #${ID} {
             margin: 12px 0;
@@ -118,10 +126,10 @@
         }
 
         #${ID} button.upload-btn {
-display: flex;
-width: 100%;
-text-align: center;
-justify-content: center;
+            display: flex;
+            width: 100%;
+            text-align: center;
+            justify-content: center;
             padding: 8px 18px;
             border: 0;
             border-radius: 4px;
@@ -136,19 +144,24 @@ justify-content: center;
         }
 
         #${ID} .progress-text {
-display: flex;
-width: 100%;
+            display: flex;
+            width: 100%;
             font-size: 12px;
             color: #555;
         }
 
-        #${ID} .success { color: #198754; }
-        #${ID} .error { color: #dc3545; }
+        #${ID} .success {
+            color: #198754;
+        }
+
+        #${ID} .error {
+            color: #dc3545;
+        }
     `;
 
     document.head.appendChild(style);
 
-    // Interface
+    // Interface.
     const panel = document.createElement('div');
     panel.id = ID;
 
@@ -164,7 +177,10 @@ width: 100%;
         <div class="file-list"></div>
 
         <div class="actions">
-            <span class="progress-text">Nenhum arquivo selecionado</span>
+            <span class="progress-text">
+                Nenhum arquivo selecionado
+            </span>
+
             <button class="upload-btn" disabled>
                 Enviar anexos
             </button>
@@ -180,34 +196,38 @@ width: 100%;
     const uploadButton = panel.querySelector('.upload-btn');
     const progressText = panel.querySelector('.progress-text');
 
+    // Renderiza os arquivos.
     function renderFiles() {
         fileList.innerHTML = '';
 
-        files.forEach((file, index) => {
-            const item = document.createElement('div');
-            item.className = 'file-item';
+        files.forEach((item, index) => {
+            const element = document.createElement('div');
+            element.className = 'file-item';
 
             const name = document.createElement('span');
             name.className = 'file-name';
-            name.textContent = file.name;
+            name.textContent = item.name;
 
             const status = document.createElement('span');
             status.className = 'file-status';
-            status.textContent = file.status || 'Aguardando';
+            status.textContent = item.status || 'Aguardando';
 
-            if (file.status === 'Enviado') {
+            if (item.status === 'Enviado') {
                 status.classList.add('success');
             }
 
-            if (file.status === 'Falhou') {
+            if (item.status === 'Falhou') {
                 status.classList.add('error');
+                status.title = item.error || '';
             }
 
-            item.append(name, status);
+            element.append(name, status);
 
-            if (!uploading && !file.status) {
+            if (!uploading && !item.status) {
                 const remove = document.createElement('button');
+
                 remove.className = 'remove-file';
+                remove.type = 'button';
                 remove.textContent = '×';
                 remove.title = 'Remover arquivo';
 
@@ -216,20 +236,24 @@ width: 100%;
                     renderFiles();
                 };
 
-                item.appendChild(remove);
+                element.appendChild(remove);
             }
 
-            fileList.appendChild(item);
+            fileList.appendChild(element);
         });
 
-        const pending = files.filter(f => !f.status).length;
+        const pending = files.filter(
+            item => !item.status
+        ).length;
 
         uploadButton.disabled = uploading || pending === 0;
+
         progressText.textContent = files.length
             ? `${files.length} arquivo(s) selecionado(s)`
             : 'Nenhum arquivo selecionado';
     }
 
+    // Adiciona arquivos à fila.
     function addFiles(selected) {
         if (uploading) return;
 
@@ -237,7 +261,8 @@ width: 100%;
             files.push({
                 file,
                 name: file.name,
-                status: ''
+                status: '',
+                error: ''
             });
         }
 
@@ -273,52 +298,94 @@ width: 100%;
         addFiles(e.dataTransfer.files);
     });
 
-    // Obtém os tokens atuais do formulário original.
-    async function getFormTokens() {
+    // Obtém o formulário original em segundo plano.
+    async function getUploadForm() {
         const response = await fetch(uploadUrl, {
             method: 'GET',
-            credentials: 'same-origin'
+            credentials: 'same-origin',
+            redirect: 'follow'
         });
 
-        if (!response.ok || response.redirected) {
-            throw new Error('Não foi possível acessar o formulário de anexos. Verifique a sessão.');
+        if (!response.ok || response.redirected &&
+            response.url.includes('/login')) {
+            throw new Error(
+                'Não foi possível acessar o formulário de anexos. Verifique a sessão.'
+            );
         }
 
         const html = await response.text();
-        const doc = new DOMParser().parseFromString(html, 'text/html');
+
+        const doc = new DOMParser().parseFromString(
+            html,
+            'text/html'
+        );
+
         const form = doc.querySelector('form.formx');
 
         if (!form) {
             throw new Error('Formulário original não encontrado.');
         }
 
+        const fileInput = form.querySelector(
+            'input[type="file"][name]'
+        );
+
+        const description = form.querySelector(
+            'textarea[name$="-descricao"]'
+        );
+
+        const observation = form.querySelector(
+            'textarea[name$="-observacao"]'
+        );
+
+        if (!fileInput || !description || !observation) {
+            throw new Error(
+                'Estrutura de campos do formulário não reconhecida.'
+            );
+        }
+
         const csrf = form.querySelector(
             '[name="csrfmiddlewaretoken"]'
-        )?.value;
-
-        const dpb = form.querySelector(
-            '[name="dpb_token"]'
         )?.value;
 
         if (!csrf) {
             throw new Error('Token CSRF não encontrado.');
         }
 
-        return { csrf, dpb };
+        return {
+            form,
+            fileName: fileInput.name,
+            descriptionName: description.name,
+            observationName: observation.name
+        };
     }
 
-    // Envia exatamente um arquivo por requisição.
+    // Envia um arquivo por requisição.
     async function uploadFile(item) {
-        const tokens = await getFormTokens();
+        // Busca os tokens e a estrutura atual do formulário.
+        const schema = await getUploadForm();
 
         const data = new FormData();
 
-        data.append('csrfmiddlewaretoken', tokens.csrf);
-        data.append('dpb_token', tokens.dpb || '');
-        data.append('descricao', '');
-        data.append('observacao', '');
-        data.append('arquivo', item.file, item.name);
+        // Preserva todos os campos ocultos originais.
+        schema.form.querySelectorAll(
+            'input[type="hidden"][name]'
+        ).forEach(field => {
+            data.append(field.name, field.value);
+        });
 
+        // Management form do Django.
+        data.set('anexos-TOTAL_FORMS', '1');
+        data.set('anexos-INITIAL_FORMS', '0');
+        data.set('anexos-MIN_NUM_FORMS', '0');
+        data.set('anexos-MAX_NUM_FORMS', '1000');
+
+        // Campos do formset.
+        data.set(schema.fileName, item.file, item.name);
+        data.set(schema.descriptionName, '');
+        data.set(schema.observationName, '');
+
+        // POST para o endpoint original.
         const response = await fetch(uploadUrl, {
             method: 'POST',
             body: data,
@@ -334,23 +401,35 @@ width: 100%;
             throw new Error(`HTTP ${response.status}`);
         }
 
-        // O formulário Django normalmente redireciona após cadastrar.
-        if (!response.redirected) {
-            const html = await response.text();
-            const doc = new DOMParser().parseFromString(
-                html, 'text/html'
-            );
+        const html = await response.text();
 
-            const errors = doc.querySelector(
+        const doc = new DOMParser().parseFromString(
+            html,
+            'text/html'
+        );
+
+        // Se o servidor permaneceu na página de cadastro,
+        // verifica erros de validação do Django.
+        const returnedForm = doc.querySelector('form.formx');
+
+        if (
+            returnedForm &&
+            (
+                response.url.includes('/anexo/add/') ||
+                !response.redirected
+            )
+        ) {
+            const errors = returnedForm.querySelector(
                 '.errorlist, .error, .alert-danger'
             );
 
-            if (errors || doc.querySelector('form.formx')) {
-                throw new Error(
-                    errors?.textContent.trim() ||
-                    'Servidor não confirmou o cadastro.'
-                );
+            if (errors) {
+                throw new Error(errors.textContent.trim());
             }
+
+            throw new Error(
+                'Servidor não confirmou o cadastro do anexo.'
+            );
         }
 
         return true;
@@ -360,7 +439,9 @@ width: 100%;
     uploadButton.addEventListener('click', async () => {
         if (uploading) return;
 
-        const queue = files.filter(f => !f.status);
+        const queue = files.filter(
+            item => !item.status
+        );
 
         if (!queue.length) return;
 
@@ -369,8 +450,11 @@ width: 100%;
         )) return;
 
         uploading = true;
+
         uploadButton.disabled = true;
         dropArea.style.pointerEvents = 'none';
+
+        progressText.classList.remove('success', 'error');
 
         let success = 0;
         let failed = 0;
@@ -379,18 +463,25 @@ width: 100%;
             const item = queue[i];
 
             progressText.textContent =
-                `Enviando ${i + 1} de ${queue.length}...`;
+                `Enviando ${i + 1} de ${queue.length}: ${item.name}`;
 
             try {
                 await uploadFile(item);
+
                 item.status = 'Enviado';
+                item.error = '';
+
                 success++;
             } catch (error) {
                 item.status = 'Falhou';
                 item.error = error.message;
+
                 failed++;
+
                 console.error(
-                    '[OS Upload]', item.name, error
+                    '[OS Upload]',
+                    item.name,
+                    error
                 );
             }
 
@@ -398,20 +489,24 @@ width: 100%;
         }
 
         uploading = false;
+
         dropArea.style.pointerEvents = '';
 
-        uploadButton.disabled = true;
-
-        progressText.textContent =
-            `Concluído: ${success} enviado(s), ${failed} falha(s).`;
-
         if (failed === 0 && success > 0) {
+            uploadButton.disabled = true;
+
             progressText.classList.add('success');
-            progressText.textContent += ' Atualizando página...';
+
+            progressText.textContent =
+                `Concluído: ${success} arquivo(s) enviado(s). Atualizando página...`;
 
             setTimeout(() => location.reload(), 2500);
+
         } else if (failed > 0) {
             progressText.classList.add('error');
+
+            progressText.textContent =
+                `Concluído: ${success} enviado(s), ${failed} falha(s).`;
 
             alert(
                 `${success} arquivo(s) enviado(s).\n` +
@@ -419,7 +514,7 @@ width: 100%;
                 'Os arquivos com falha permanecem na lista para nova tentativa.'
             );
 
-            // Permite tentar novamente somente os que falharam.
+            // Permite tentar novamente somente os arquivos que falharam.
             for (const item of files) {
                 if (item.status === 'Falhou') {
                     item.status = '';
@@ -428,8 +523,14 @@ width: 100%;
 
             renderFiles();
         }
+
     });
 
     renderFiles();
+
+    console.log(
+        '[OS Upload] Inicializado.',
+        uploadUrl
+    );
 
 })();
