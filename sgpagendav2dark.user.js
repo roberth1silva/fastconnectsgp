@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SGP Agenda Plus & Design v2 - Dark
 // @namespace    http://tampermonkey.net/
-// @version      2.8
+// @version      3.0
 // @description  SGP Agenda Plus & Design v2 - Dark
 // @author       Roberth
 // @match        https://fastconnect.sgp.net.br/admin/atendimento/agenda/view/*
@@ -9,159 +9,231 @@
 // @match        https://sgp.fastconnect.net.br/admin/atendimento/agenda/view/*
 // @match        https://sgp.fastfibra.net.br/admin/atendimento/agenda/view/*
 // @match        http://45.164.128.5:8000/admin/atendimento/agenda/view/*
+// @match        http://192.168.5.24:8000/admin/atendimento/agenda/view/*
 // @require      https://code.jquery.com/jquery-3.7.1.min.js
 // @grant        GM_getResourceText
 // @grant        GM_addStyle
-// @grant        GM_xmlhttpRequest
+// @grant        unsafeWindow
 // @resource     REMOTE_CSS https://raw.githubusercontent.com/roberth1silva/fastconnectsgp/refs/heads/main/assets/sgpstyle.css
 // @resource     REMOTE_CSS_DARK https://raw.githubusercontent.com/roberth1silva/fastconnectsgp/refs/heads/main/assets/sgpstyledark.css
 // @run-at       document-start
 // ==/UserScript==
 
-/* global $ */
+/* global $, unsafeWindow, GM_getResourceText, GM_addStyle */
 
+// =========================
+// CONFIGURAÇÕES
+// =========================
+const MAX_TRIES = 5;          // tentativas automáticas do watchdog (recarregar a página)
+const WATCHDOG_MS = 10000;    // tempo de espera pelos eventos antes de recarregar
+const MAX_CONCURRENT = 6;     // requisições simultâneas à API do SGP
+
+// =========================
+// ESTADO
+// =========================
 const groupedByWeek = {};
-const allInfo = [];
 const situationDay = {};
 const isHoliday = {};
+const osBase = {};            // dados vindos da API (por id da OS)
+const osDetail = {};          // dados do detalhe da OS, carregados ao abrir o modal
+const seenEvents = new Set();
+let calendarCaptured = false; // true quando o FullCalendar entregou a lista de eventos
 let currentIndex = 0;
 let weekKeys = [];
 let currentMonthDate = new Date();
+let currentModalId = null;
 
+const W = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
+const TRIES_KEY = 'agendaTries:' + location.href;
+
+// =========================
+// HELPERS
+// =========================
+const pad = n => String(n).padStart(2, '0');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const norm = s => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : '';
+const localKey = d => d.toLocaleDateString('en-CA'); // yyyy-mm-dd no fuso local (evita o desvio do toISOString/UTC)
+
+// Limita quantas requisições rodam ao mesmo tempo
+let activeRequests = 0;
+const requestQueue = [];
+function limited(fn) {
+    return new Promise((resolve, reject) => {
+        const run = () => {
+            activeRequests++;
+            fn().then(resolve, reject).finally(() => {
+                activeRequests--;
+                if (requestQueue.length) requestQueue.shift()();
+            });
+        };
+        if (activeRequests < MAX_CONCURRENT) run();
+        else requestQueue.push(run);
+    });
+}
+
+// =========================
+// SEMANAS
+// =========================
 function formatarSemanaLabel(weekKey) {
     const [ano, semana] = weekKey.split('-W').map(Number);
 
     const jan1 = new Date(ano, 0, 1);
-    const jan1Day = jan1.getDay();
-
     const primeiroDomingo = new Date(jan1);
-    if (jan1Day !== 0) {
-        primeiroDomingo.setDate(jan1.getDate() - jan1Day);
-    }
+    primeiroDomingo.setDate(jan1.getDate() - jan1.getDay());
 
     const inicio = new Date(primeiroDomingo);
     inicio.setDate(primeiroDomingo.getDate() + (semana - 1) * 7);
-
     const fim = new Date(inicio);
     fim.setDate(inicio.getDate() + 6);
 
-    const dia1 = String(inicio.getDate()).padStart(2, '0');
-    const dia2 = String(fim.getDate()).padStart(2, '0');
-    const mes = fim.toLocaleDateString('pt-BR', { month: 'long' }).toLowerCase();
-    const anoTexto = fim.getFullYear();
+    const d1 = pad(inicio.getDate());
+    const d2 = pad(fim.getDate());
+    const m1 = inicio.toLocaleDateString('pt-BR', { month: 'long' }).toLowerCase();
+    const m2 = fim.toLocaleDateString('pt-BR', { month: 'long' }).toLowerCase();
+    const a1 = inicio.getFullYear();
+    const a2 = fim.getFullYear();
 
-    return `${dia1} à ${dia2} de ${mes} de ${anoTexto}`;
+    if (a1 !== a2) return `${d1} de ${m1} de ${a1} à ${d2} de ${m2} de ${a2}`;
+    if (m1 !== m2) return `${d1} de ${m1} à ${d2} de ${m2} de ${a2}`;
+    return `${d1} à ${d2} de ${m2} de ${a2}`;
 }
 
-function getWeekKey(dateStr) {
-    const date = new Date(dateStr);
-
-    const day = date.getDay();
+function getWeekKey(dateLike) {
+    const date = new Date(dateLike);
     const sunday = new Date(date);
-    sunday.setDate(date.getDate() - day);
+    sunday.setDate(date.getDate() - date.getDay());
 
     const year = sunday.getFullYear();
     const firstSunday = new Date(year, 0, 1);
     firstSunday.setDate(firstSunday.getDate() - firstSunday.getDay());
 
-    const diffDays = Math.floor((sunday - firstSunday) / 86400000);
+    const diffDays = Math.round((sunday - firstSunday) / 86400000);
     const week = Math.floor(diffDays / 7) + 1;
 
-    return `${year}-W${String(week).padStart(2, '0')}`;
+    return `${year}-W${pad(week)}`;
 }
 
-function groupedEvents(events)
-{
-    const eventsMap = events.map(e => ({
-        id: e.id,
-        title: e.title,
-        situation: e.is_encerrado,
-        holiday: e.is_feriado || false,
-        date: new Date(e.start)
-    }));
-    const eventsSort = eventsMap.sort((a, b) => a.date - b.date);
-    eventsSort.forEach(ev => {
-        if(ev.id) {
+const currentWeekKey = getWeekKey(new Date());
+
+function groupedEvents(events) {
+    const mapped = events
+        .map(e => ({
+            id: e.id,
+            title: e.title,
+            situation: e.is_encerrado,
+            holiday: e.is_feriado || false,
+            date: new Date(e.start)
+        }))
+        .sort((a, b) => a.date - b.date);
+
+    mapped.forEach(ev => {
+        const dateKey = localKey(ev.date);
+        const uid = ev.id ? `os-${ev.id}` : `h-${dateKey}-${ev.title}`;
+        if (seenEvents.has(uid)) return; // evita duplicar se o calendário for criado 2x
+        seenEvents.add(uid);
+
+        if (ev.id) {
             const key = getWeekKey(ev.date);
-            if (!groupedByWeek[key]) {
-                groupedByWeek[key] = [];
-            }
-            groupedByWeek[key].push(ev);
+            (groupedByWeek[key] ||= []).push(ev);
         }
-    });
-    eventsSort.forEach(ev => {
-        const dateKey = ev.date.toISOString().split("T")[0];
-        const statusKey = ev.situation ? "encerrado" : "aberto";
-        if(ev.holiday)
-        {
+
+        if (ev.holiday) {
             isHoliday[dateKey] = { holiday: true, title: ev.title };
-        }
-        else
-        {
-            if(!situationDay[dateKey]) {
-                situationDay[dateKey] = { encerrado: 0, aberto: 0 };
-            }
-            situationDay[dateKey][statusKey]++;
+        } else {
+            const statusKey = ev.situation ? 'encerrado' : 'aberto';
+            (situationDay[dateKey] ||= { encerrado: 0, aberto: 0 })[statusKey]++;
         }
     });
 }
 
-(function () {
-    'use strict';
+// =========================
+// HOOK NO FULLCALENDAR
+// =========================
+(function hookCalendar() {
+    const timer = setInterval(() => {
+        const FC = W.FullCalendar;
+        if (!FC || !FC.Calendar) return;
+        clearInterval(timer);
 
-    let originalRender;
+        const OriginalCalendar = FC.Calendar;
+        OriginalCalendar.prototype.render = function () {}; // bloqueia o render nativo
 
-    const hookCalendar = () => {
-        if (typeof FullCalendar !== "undefined" && FullCalendar.Calendar) {
-            const OriginalCalendar = FullCalendar.Calendar;
-
-            originalRender = OriginalCalendar.prototype.render;
-            OriginalCalendar.prototype.render = function () {
-                console.log("Bloqueado: calendar.render()");
-            };
-
-            FullCalendar.Calendar = function (...args) {
-                const options = args[1] || {};
-
-                if (Array.isArray(options.events)) {
-                    setTimeout(() => {
-                        groupedEvents(options.events);
-                    }, 0);
-                }
-
-                const calendar = new OriginalCalendar(...args);
-                return calendar;
-            };
-
-            FullCalendar.Calendar.prototype = OriginalCalendar.prototype;
-        } else {
-            setTimeout(hookCalendar, 50);
-        }
-    };
-
-    hookCalendar();
-
+        FC.Calendar = function (...args) {
+            const options = args[1] || {};
+            if (Array.isArray(options.events)) {
+                const events = options.events;
+                setTimeout(() => {
+                    groupedEvents(events);
+                    calendarCaptured = true;
+                }, 0);
+            }
+            return new OriginalCalendar(...args);
+        };
+        FC.Calendar.prototype = OriginalCalendar.prototype;
+    }, 10);
+    setTimeout(() => clearInterval(timer), 60000);
 })();
 
-function waitForGroupedEvents(callback) {
-    const check = () => {
-        if (Object.keys(groupedByWeek).length > 0) {
+function waitForCalendar(callback) {
+    const t = setInterval(() => {
+        if (calendarCaptured) {
+            clearInterval(t);
             callback();
-        } else {
-            setTimeout(check, 100);
         }
-    };
-    check();
+    }, 100);
 }
 
-function setStyle(darkMode)
-{
-    const myCss = GM_getResourceText("REMOTE_CSS"); GM_addStyle(myCss);
-    if(darkMode) { const myCssDark = GM_getResourceText("REMOTE_CSS_DARK"); GM_addStyle(myCssDark); }
+// =========================
+// WATCHDOG (repete o carregamento sozinho, com limite)
+// =========================
+function agendaWatchdog() {
+    if (calendarCaptured) return;
+
+    const tries = +sessionStorage.getItem(TRIES_KEY) || 0;
+    if (tries >= MAX_TRIES) {
+        console.error(`[Agenda Watchdog] Falhou após ${MAX_TRIES} tentativas.`);
+        $(function () {
+            $('body').prepend(`
+                <div class="agenda-retry">
+                    <span>A agenda não carregou após ${MAX_TRIES} tentativas automáticas.</span>
+                    <button type="button" id="agendaRetryBtn">Tentar novamente</button>
+                </div>`);
+            $('#agendaRetryBtn').on('click', () => {
+                sessionStorage.removeItem(TRIES_KEY);
+                location.reload();
+            });
+        });
+        return;
+    }
+
+    sessionStorage.setItem(TRIES_KEY, tries + 1);
+    console.warn(`[Agenda Watchdog] Sem dados após ${WATCHDOG_MS / 1000}s. Tentativa ${tries + 1}/${MAX_TRIES}, recarregando...`);
+    location.reload();
+}
+setTimeout(agendaWatchdog, WATCHDOG_MS);
+
+// =========================
+// ESTILO
+// =========================
+function setStyle(darkMode) {
+    GM_addStyle(GM_getResourceText('REMOTE_CSS'));
+    if (darkMode) GM_addStyle(GM_getResourceText('REMOTE_CSS_DARK'));
+    GM_addStyle(`
+        .service.no-tech { box-shadow: inset 4px 0 0 #ff9800; }
+        .service .sem-tecnico { color: #ff9800; font-weight: 700; }
+        .service .sem-tecnico::before { content: "⚠ "; }
+        .agenda-empty { width: 100%; padding: 28px; text-align: center; opacity: .7; }
+        .agenda-retry { display: flex; gap: 12px; align-items: center; margin: 10px 15px; padding: 10px 14px;
+            background: #4a2a00; color: #ffcc80; border: 1px solid #ff9800; border-radius: 6px; }
+        .agenda-retry button { background: #ff9800; color: #000; border: 0; border-radius: 4px; padding: 6px 12px; cursor: pointer; font-weight: 700; }
+    `);
 }
 
-function createElement()
-{
+// =========================
+// ELEMENTOS DA PÁGINA
+// =========================
+function createElement() {
     const $modal = $(`<div class="modal" id="modalService">
         <div class="modal-content">
           <div class="modal-header">
@@ -176,7 +248,7 @@ function createElement()
                     <path d="M12.971 1.816A5.23 5.23 0 0 1 14.25 5.25v1.875c0 .207.168.375.375.375H16.5a5.23 5.23 0 0 1 3.434 1.279 9.768 9.768 0 0 0-6.963-6.963Z" />
                 </svg>
                 <span class="modal-text-gray">Ocorrência:&nbsp;</span>
-                <a href="/admin/atendimento/ocorrencia/68148/edit/" target="_blank" id="os-id-link"><span id="os-id"></span></a>
+                <a href="" target="_blank" id="os-id-link"><span id="os-id"></span></a>
               </span>
               <span class="modal-text">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="icon-text">
@@ -304,34 +376,23 @@ function createElement()
   </div>
 </div>
     `);
+
     const $monthCalendar = $(`<div id="month-calendar" class="month-calendar" style="display: none;">
       <div class="row-week">
-        <div>
-          <span>Dom</span>
-        </div>
-        <div>
-          <span>Seg</span>
-        </div>
-        <div>
-          <span>Ter</span>
-        </div>
-        <div>
-          <span>Qua</span>
-        </div>
-        <div>
-          <span>Qui</span>
-        </div>
-        <div>
-          <span>Sex</span>
-        </div>
-        <div>
-          <span>Sab</span>
-        </div>
+        <div><span>Dom</span></div>
+        <div><span>Seg</span></div>
+        <div><span>Ter</span></div>
+        <div><span>Qua</span></div>
+        <div><span>Qui</span></div>
+        <div><span>Sex</span></div>
+        <div><span>Sab</span></div>
       </div>
       <div class="row-day">
       </div>
     </div>`);
-    $("#calendar").before($controls).before($monthCalendar).before($calendarWrapper).before($modal);
+
+    $('#calendar').before($controls).before($monthCalendar).before($calendarWrapper).before($modal);
+
     const $dayModal = $(`
 <div class="modal modal-day" id="modalDay">
   <div class="modal-content" style="width:90%; text-align: left;">
@@ -345,338 +406,313 @@ function createElement()
   </div>
 </div>
 `);
-    $("body").append($dayModal);
-
+    $('body').append($dayModal);
 }
 
-function fillModal(id)
-{
-    const item = allInfo.find(i => i.id == id);
-    $("#title-id-os").text("Ordem de Serviço " + id);
-    $("#os-id-link").attr("href", item.ocorrenciaLink);
-    $("#os-id").text(item.ocorrenciaText);
-    $("#register-date").text(item.dataCadastro);
-    $("#register-user").text(item.abertaPor);
-    $("#os-status").text(item.situacao);
-    $("#schedule-date").text(item.dataAgendamento);
-    $("#customer-id").text(item.clienteText);
-    $("#customer-id-link").attr("href", item.clienteLink);
-    $("#technicians").text(item.tecnicos);
-    $("#os-reason").text(item.motivo);
-    let conteudo = item.conteudo;
-    conteudo = conteudo.replace(/\n/g, "<br>");
-    $(".report-problem").html(conteudo);
-    $("#finished-date").text(item.dataFinalizacao);
-    $("#finished-user").text(item.finalizadoPor);
-    $("#btn-open-os").data("id", id);
-    $("#btn-print-os").data("id", id);
-}
-
-function onClickModal()
-{
-    let clickTimer = null;
-    $(".service").on("click", function(e) {
-        const id = $(this).data("id");
-        const self = this;
-
-        // Aguarda um pouco para ver se vai acontecer um dblclick
-        clickTimer = setTimeout(function() {
-            fillModal(id);
-            $("#modalService").css("display", "flex");
-        }, 250); // tempo suficiente para o navegador detectar o dblclick
-    });
-
-    $(".service").on("dblclick", function() {
-        // Se for um duplo clique, cancela o clique simples
-        clearTimeout(clickTimer);
-
-        const cod = $(this).data("id");
-        const url = `/admin/atendimento/ocorrencia/os/${cod}/edit/`;
-        window.open(url, '_blank');
-    });
-    $("#modalService").on("click", function() {
-        $(this).css("display", "none");
-    });
-    $(".modal-content").on("click", function(event) {
-        event.stopPropagation();
-    });
-    $(".modal-close").on("click", function() {
-        $("#modalService").css("display", "none");
-    });
-    $(".btn-open-os").on("click", function(event) {
-        event.stopPropagation();
-    });
-    $("#btn-open-os").on("click", function(){
-        const cod = $(this).data("id");
-        const url = `/admin/atendimento/ocorrencia/os/${cod}/edit/`;
-        window.open(url, '_blank');
-    });
-    $("#btn-print-os").on("click", function(){
-        const cod = $(this).data("id");
-        const url = `/admin/atendimento/ocorrencia/os/${cod}/print/`;
-        window.open(url, '_blank');
-    });
-
-    $(".search-input").on("input", function () {
-        const termo = $(this).val().toLowerCase();
-        if(termo == "")
-        {
-            $(".morning").show();
-            $(".afternoon").show();
-        }
-        else
-        {
-            $(".morning").hide();
-            $(".afternoon").hide();
-        }
-
-        $(".service").each(function () {
-            const texto = $(this).text().toLowerCase();
-
-            // Se o texto contém o termo, mostra; senão, esconde
-            $(this).toggle(texto.includes(termo));
-        });
-    });
-
-    $(document).on("click", ".calendar-day", function () {
-        const date = $(this).data("date"); // ex: 2025-06-04
-        const morningId = `#morning-${date}`;
-        const afternoonId = `#afternoon-${date}`;
-
-        const $body = $(".modal-day-body");
-        $body.empty(); // limpa conteúdo anterior
-
-        const $morning = $(morningId).clone().show();
-        const $afternoon = $(afternoonId).clone().show();
-
-        if ($morning.length) {
-            $body.append($morning);
-        }
-
-        if ($afternoon.length) {
-            $body.append($afternoon);
-        }
-
-        if ($morning.length || $afternoon.length) {
-            $(".modal-day").css("display", "flex");
-        }
-    });
-
-
-    $("#modalDay").on("click", function() {
-        $(this).css("display", "none");
-    });
-    $(".modal-content").on("click", function(event) {
-        event.stopPropagation();
-    });
-    $(".close-day-modal").on("click", function() {
-        $("#modalDay").css("display", "none");
-    });
-
-
-}
-
-function pushInfo(id, situacao, tecnicos, motivo, conteudo)
-{
-    if (allInfo.find(i => i.id == id)) {
-        return;
-    }
-    $.get(`/admin/atendimento/os/${id}/agenda/evento/`, function(html) {
-        const tempDOM = $("<div>").html(html);
-        const tds = tempDOM.find("table td");
-        const ocorrenciaText = $(tds[1]).text().trim();
-        const ocorrenciaLink = $(tds[1]).find("a").attr("href");
-        const dataCadastro = $(tds[3]).text().trim();
-        let abertaPor = $(tds[5]).text().trim();
-        abertaPor = abertaPor.charAt(0).toUpperCase() + abertaPor.slice(1).toLowerCase()
-        const dataAgendamento = $(tds[11]).text().trim();
-        const clienteText = $(tds[13]).text().trim();
-        const clienteLink = $(tds[13]).find("a").attr("href");
-        const dataFinalizacao = $(tds[21]).text().trim();
-        let finalizadoPor = $(tds[25]).text().trim();
-        finalizadoPor = finalizadoPor.charAt(0).toUpperCase() + finalizadoPor.slice(1).toLowerCase()
-        allInfo.push({
-            id: id,
-            ocorrenciaText: ocorrenciaText,
-            ocorrenciaLink: ocorrenciaLink,
-            dataCadastro: dataCadastro,
-            abertaPor: abertaPor,
-            situacao: situacao,
-            dataAgendamento: dataAgendamento,
-            clienteText: clienteText,
-            clienteLink: clienteLink,
-            dataFinalizacao: dataFinalizacao,
-            tecnicos: tecnicos,
-            motivo: motivo,
-            finalizadoPor: finalizadoPor,
-            conteudo: conteudo
-        });
-    });
-}
-
-function appendService(ev, containerId) {
-    return fetchDataFromAPI(ev.id).then(info => {
-        const statusMap = {
-            "Aberta": "open",
-            "Em execução": "executing",
-            "Encerrada": "finished"
-        };
-        const statusClass = statusMap[info.os_status_txt] || 'open';
-        const statusLabel = {
-            "Aberta": "Em Aberto",
-            "Em execução": "Em Execução",
-            "Encerrada": "Finalizado"
-        }[info.os_status_txt] || "Em Aberto";
-
-        const endereco = `
-            ${(info.endereco_logradouro || '')} ${(info.endereco_numero || '')} ${(info.endereco_complemento || '')}<br>
-            ${(info.endereco_bairro || '')}, ${(info.endereco_cidade || '')}-${(info.endereco_uf || '')}
-        `.trim();
-
-        let tecnicos = '';
-        if (info.os_tecnico_responsavel) {
-            let nome = info.os_tecnico_responsavel.split(" ")[0];
-            tecnicos = nome.charAt(0).toUpperCase() + nome.slice(1).toLowerCase();
-        }
-        if (Array.isArray(info.os_tecnicos_auxiliares)) {
-            info.os_tecnicos_auxiliares.forEach(aux => {
-                const nome = aux.split(" ")[0];
-                tecnicos += ` - ${nome.charAt(0).toUpperCase()}${nome.slice(1).toLowerCase()}`;
-            });
-        }
-
-        let obs = '';
-        if (info.os_conteudo && info.os_conteudo.includes("Obs:")) {
-            obs = info.os_conteudo.split("Obs:")[1].trim();
-        }
-        pushInfo(ev.id, statusLabel, tecnicos, info.os_motivo_descricao, info.os_conteudo);
-        const serviceHTML = `
-          <div class="service" data-id="${info.os_id}">
-            <span class="service-status"><span class="status ${statusClass}">${statusLabel}</span></span>
-            <span class="service-time">${ev.date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-            <span class="service-customer"><strong>${info.cliente}</strong><br>${info.os_motivo_descricao}</span>
-            <span class="service-employee">${tecnicos}</span>
-            <span class="service-observation"><strong>Observação da OS:</strong></br>${obs}</span>
-            <span class="service-location">${endereco}</span>
-            <span class="service-action"><a class="btn btn-dark btn-open-os" href="/admin/atendimento/ocorrencia/os/${info.os_id}/edit/" target="_blank">Abrir OS</a></span>
-          </div>`;
-        $(`#${containerId}`).append(serviceHTML);
-    });
-}
-
-async function fetchDataFromAPI(id) {
-    return new Promise(resolve => {
+// =========================
+// DADOS DA OS
+// =========================
+function fetchDataFromAPI(id, attempt = 1) {
+    return limited(() => new Promise(resolve => {
         $.ajax({
             url: `/api/os/list/id/${id}`,
-            method: 'POST',            
+            method: 'POST',
             success: data => resolve(data || {}),
             error: err => {
                 console.error('Erro ao buscar dados:', err);
-                resolve({});
+                resolve(null);
             }
         });
+    })).then(data => {
+        if (data !== null) return data;
+        if (attempt < 2) {
+            return new Promise(r => setTimeout(r, 500)).then(() => fetchDataFromAPI(id, attempt + 1));
+        }
+        return {};
     });
 }
 
-async function renderWeek(weekKey, events) {
-    const currentWeekKey = getWeekKey(new Date());
-    if(weekKey === currentWeekKey)
-    {
+// Detalhe da OS: só é buscado quando o modal é aberto (e fica em cache)
+function fetchDetail(id) {
+    if (osDetail[id]) return Promise.resolve(osDetail[id]);
+    return new Promise(resolve => {
+        $.get(`/admin/atendimento/os/${id}/agenda/evento/`)
+            .done(html => {
+                const doc = new DOMParser().parseFromString(html, 'text/html'); // não executa scripts
+                const tds = $(doc.body).find('table td');
+                const txt = i => $(tds[i]).text().trim();
+                const lnk = i => $(tds[i]).find('a').attr('href') || '';
+                const d = {
+                    ocorrenciaText: txt(1),
+                    ocorrenciaLink: lnk(1),
+                    dataCadastro: txt(3),
+                    abertaPor: cap(txt(5)),
+                    dataAgendamento: txt(11),
+                    clienteText: txt(13),
+                    clienteLink: lnk(13),
+                    dataFinalizacao: txt(21),
+                    finalizadoPor: cap(txt(25))
+                };
+                osDetail[id] = d;
+                resolve(d);
+            })
+            .fail(() => resolve({}));
+    });
+}
+
+// =========================
+// MODAL
+// =========================
+function fillDetail(d) {
+    const v = x => x || '—';
+    $('#os-id').text(v(d.ocorrenciaText));
+    $('#os-id-link').attr('href', d.ocorrenciaLink || null);
+    $('#register-date').text(v(d.dataCadastro));
+    $('#register-user').text(v(d.abertaPor));
+    $('#schedule-date').text(v(d.dataAgendamento));
+    $('#customer-id').text(v(d.clienteText));
+    $('#customer-id-link').attr('href', d.clienteLink || null);
+    $('#finished-date').text(v(d.dataFinalizacao));
+    $('#finished-user').text(v(d.finalizadoPor));
+}
+
+async function openModal(id) {
+    currentModalId = id;
+    const base = osBase[id] || {};
+
+    // Já mostra o que veio da API; o resto chega em seguida
+    $('#title-id-os').text('Ordem de Serviço ' + id);
+    $('#os-status').text(base.situacao || '');
+    $('#technicians').text(base.tecnicos || 'Sem técnico');
+    $('#os-reason').text(base.motivo || '');
+    $('.report-problem').html(esc(base.conteudo).replace(/\n/g, '<br>'));
+
+    let d = osDetail[id];
+    if (!d) {
+        $('#os-id, #register-date, #register-user, #schedule-date, #customer-id, #finished-date, #finished-user').text('…');
+        $('#os-id-link, #customer-id-link').removeAttr('href');
+    }
+    $('#modalService').css('display', 'flex');
+
+    if (!d) d = await fetchDetail(id);
+    if (currentModalId !== id) return; // o usuário abriu outra OS enquanto carregava
+    fillDetail(d);
+}
+
+// =========================
+// EVENTOS (registrados uma única vez, com delegação)
+// =========================
+function bindEvents() {
+    let clickTimer = null;
+
+    $(document).on('click', '.service', function (e) {
+        if ($(e.target).closest('a, button').length) return;
+        const id = $(this).data('id');
+        clearTimeout(clickTimer);
+        clickTimer = setTimeout(() => openModal(id), 250); // espera para ver se vira dblclick
+    });
+
+    $(document).on('dblclick', '.service', function (e) {
+        if ($(e.target).closest('a, button').length) return;
+        clearTimeout(clickTimer);
+        window.open(`/admin/atendimento/ocorrencia/os/${$(this).data('id')}/edit/`, '_blank');
+    });
+
+    const closeOnOverlay = sel => $(sel).on('click', function (e) {
+        if (e.target === this) $(this).css('display', 'none');
+    });
+    closeOnOverlay('#modalService');
+    closeOnOverlay('#modalDay');
+    $('#modalService .modal-close').on('click', () => $('#modalService').css('display', 'none'));
+    $('.close-day-modal').on('click', () => $('#modalDay').css('display', 'none'));
+    $(document).on('keydown', e => {
+        if (e.key === 'Escape') $('#modalService, #modalDay').css('display', 'none');
+    });
+
+    $('#btn-open-os').on('click', () => {
+        window.open(`/admin/atendimento/ocorrencia/os/${currentModalId}/edit/`, '_blank');
+    });
+    $('#btn-print-os').on('click', () => {
+        window.open(`/admin/atendimento/ocorrencia/os/${currentModalId}/print/`, '_blank');
+    });
+
+    // Busca por cliente (ignora acentos e maiúsculas)
+    $(document).on('input', '.search-input', function () {
+        const termo = norm($(this).val().trim());
+        $('.morning, .afternoon').toggle(termo === '');
+        $('.service').each(function () {
+            $(this).toggle(norm($(this).text()).includes(termo));
+        });
+    });
+
+    // Clique em um dia da visão mensal
+    $(document).on('click', '.calendar-day', function () {
+        const date = $(this).data('date');
+        const $body = $('.modal-day-body').empty();
+        const $morning = $(`#morning-${date}`).clone().removeAttr('id').show();
+        const $afternoon = $(`#afternoon-${date}`).clone().removeAttr('id').show();
+
+        if ($morning.length) $body.append($morning);
+        if ($afternoon.length) $body.append($afternoon);
+        if ($morning.length || $afternoon.length) $('#modalDay').css('display', 'flex');
+    });
+}
+
+// =========================
+// RENDERIZAÇÃO
+// =========================
+async function buildService(ev) {
+    const info = await fetchDataFromAPI(ev.id);
+    const time = ev.date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    if (!info.os_id) {
+        // Falhou mesmo após retry: mostra uma linha mínima em vez de quebrar
+        return `
+          <div class="service" data-id="${esc(ev.id)}">
+            <span class="service-status"><span class="status open">Erro</span></span>
+            <span class="service-time">${time}</span>
+            <span class="service-customer"><strong>${esc(ev.title)}</strong><br>Não foi possível carregar os dados desta OS</span>
+            <span class="service-employee"></span>
+            <span class="service-observation"></span>
+            <span class="service-location"></span>
+            <span class="service-action"><a class="btn btn-dark btn-open-os" href="/admin/atendimento/ocorrencia/os/${esc(ev.id)}/edit/" target="_blank">Abrir OS</a></span>
+          </div>`;
+    }
+
+    const statusMap = { 'Aberta': 'open', 'Em execução': 'executing', 'Encerrada': 'finished' };
+    const labelMap = { 'Aberta': 'Em Aberto', 'Em execução': 'Em Execução', 'Encerrada': 'Finalizado' };
+    const statusClass = statusMap[info.os_status_txt] || 'open';
+    const statusLabel = labelMap[info.os_status_txt] || 'Em Aberto';
+
+    const endereco = `
+        ${esc(info.endereco_logradouro)} ${esc(info.endereco_numero)} ${esc(info.endereco_complemento)}<br>
+        ${esc(info.endereco_bairro)}, ${esc(info.endereco_cidade)}-${esc(info.endereco_uf)}
+    `.trim();
+
+    let tecnicos = '';
+    if (info.os_tecnico_responsavel) {
+        tecnicos = cap(info.os_tecnico_responsavel.split(' ')[0]);
+    }
+    if (Array.isArray(info.os_tecnicos_auxiliares)) {
+        info.os_tecnicos_auxiliares.forEach(aux => {
+            tecnicos += ` - ${cap(aux.split(' ')[0])}`;
+        });
+    }
+
+    let obs = '';
+    if (info.os_conteudo && info.os_conteudo.includes('Obs:')) {
+        obs = info.os_conteudo.split('Obs:')[1].trim();
+    }
+
+    osBase[info.os_id] = {
+        situacao: statusLabel,
+        tecnicos,
+        motivo: info.os_motivo_descricao,
+        conteudo: info.os_conteudo
+    };
+
+    const semTecnico = !tecnicos && statusLabel !== 'Finalizado';
+    const techHTML = tecnicos
+        ? `<span class="service-employee">${esc(tecnicos)}</span>`
+        : `<span class="service-employee ${semTecnico ? 'sem-tecnico' : ''}">Sem técnico</span>`;
+    const obsHTML = obs
+        ? `<span class="service-observation"><strong>Observação da OS:</strong><br>${esc(obs)}</span>`
+        : `<span class="service-observation"></span>`;
+
+    return `
+      <div class="service${semTecnico ? ' no-tech' : ''}" data-id="${esc(info.os_id)}">
+        <span class="service-status"><span class="status ${statusClass}">${statusLabel}</span></span>
+        <span class="service-time">${time}</span>
+        <span class="service-customer"><strong>${esc(info.cliente)}</strong><br>${esc(info.os_motivo_descricao)}</span>
+        ${techHTML}
+        ${obsHTML}
+        <span class="service-location">${endereco}</span>
+        <span class="service-action"><a class="btn btn-dark btn-open-os" href="/admin/atendimento/ocorrencia/os/${esc(info.os_id)}/edit/" target="_blank">Abrir OS</a></span>
+      </div>`;
+}
+
+async function renderWeek(weekKey, events, isFirst) {
+    if (isFirst) {
         $('#loader').css('display', 'flex');
         $('#week-loader').css('display', 'flex');
         $('#main-table').css('display', 'none');
-        $('#main-table').append(`<div class="week-block" id="week-${weekKey}" style="display: flex;"></div>`);
     }
-    else
-    {
-        $('#main-table').append(`<div class="week-block" id="week-${weekKey}" style="display: none;"></div>`);
-    }
-    const promises = [];
+    const $week = $(`<div class="week-block" id="week-${weekKey}" style="display: ${isFirst ? 'flex' : 'none'};"></div>`);
+    $('#main-table').append($week);
+
     const grouped = {};
-
     events.forEach(ev => {
-        const date = ev.date;
-        const day = date.toLocaleDateString('en-CA');
-        const period = date.getHours() < 12 ? 'morning' : 'afternoon';
-        if (!grouped[day]) grouped[day] = { morning: [], afternoon: [] };
-        grouped[day][period].push(ev);
+        const day = localKey(ev.date);
+        const period = ev.date.getHours() < 12 ? 'morning' : 'afternoon';
+        (grouped[day] ||= { morning: [], afternoon: [] })[period].push(ev);
     });
 
-    Object.entries(grouped).forEach(([day, periods]) => {
-        const options = { weekday: 'long', day: '2-digit', month: 'long', year: "numeric" };
-        const dayUTC = day + "T00:00:00";
-        const dayText = new Date(dayUTC).toLocaleDateString('pt-BR', options).replace(/^./, c => c.toUpperCase()); // capitaliza
-        const dayId = day;
+    const options = { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' };
+    const tasks = [];
 
-        $("#week-" + weekKey).append(`<div class="day-block" id="day-${dayId}"><span class="title">${dayText}</span></div>`);
+    Object.keys(grouped).sort().forEach(day => {
+        const dayText = new Date(day + 'T00:00:00').toLocaleDateString('pt-BR', options).replace(/^./, c => c.toUpperCase());
+        const $day = $(`<div class="day-block" id="day-${day}"><span class="title">${dayText}</span></div>`);
+        $week.append($day);
 
-        if (periods.morning.length) {
-            $(`#day-${dayId}`).append(`<span class="morning">Manhã</span><div class="period" id="morning-${dayId}"></div>`);
-            periods.morning.forEach(ev => promises.push(appendService(ev, `morning-${dayId}`)));
-        }
-
-        if (periods.afternoon.length) {
-            $(`#day-${dayId}`).append(`<span class="afternoon">Tarde</span><div class="period" id="afternoon-${dayId}"></div>`);
-            periods.afternoon.forEach(ev => promises.push(appendService(ev, `afternoon-${dayId}`)));
-        }
+        [['morning', 'Manhã'], ['afternoon', 'Tarde']].forEach(([period, label]) => {
+            const list = grouped[day][period];
+            if (!list.length) return;
+            $day.append(`<span class="${period}">${label}</span>`);
+            const $period = $(`<div class="period" id="${period}-${day}"></div>`);
+            $day.append($period);
+            // Promise.all preserva a ordem do array: as OS entram sempre em ordem de horário
+            tasks.push(Promise.all(list.map(buildService)).then(htmls => $period.append(htmls.join(''))));
+        });
     });
-    await Promise.all(promises);
-    onClickModal();
-    if(weekKey === currentWeekKey)
-    {
+
+    await Promise.all(tasks);
+
+    if (isFirst) {
         $('#loader').css('display', 'none');
         $('#main-table').css('display', 'flex');
     }
 }
 
-const currentWeekKey = getWeekKey(new Date());
-
 function showWeek(index) {
-    $(".week-block").hide();
+    $('.week-block').hide();
     const key = weekKeys[index];
     $(`#week-${key}`).show();
-    $(".title-week").text(formatarSemanaLabel(key));
+    $('.title-week').text(formatarSemanaLabel(key));
     currentIndex = index;
 }
 
+// =========================
+// VISÃO MENSAL
+// =========================
 function fillEventsInMonth() {
-    for (const date in isHoliday)
-    {
+    for (const date in isHoliday) {
         const $day = $(`.calendar-day[data-date="${date}"] .day-events`);
         const data = isHoliday[date];
-        if(data.holiday)
-        {
-            $day.parent().addClass("calendar-day-holiday");
-            $day.append(`<span class="day-status day-holiday">${data.title}</span>`);
+        if (data.holiday) {
+            $day.parent().addClass('calendar-day-holiday');
+            $day.append(`<span class="day-status day-holiday">${esc(data.title)}</span>`);
         }
     }
     for (const date in situationDay) {
         const $day = $(`.calendar-day[data-date="${date}"] .day-events`);
         const data = situationDay[date];
-        if(data.aberto > 0) {
-            $day.append(`<span class="day-status day-open">Em Aberto: ${data.aberto}</span>`);
-        }
-
-        if(data.encerrado > 0) {
-            $day.append(`<span class="day-status day-finished">Encerrado: ${data.encerrado}</span>`);
-        }
+        if (data.aberto > 0) $day.append(`<span class="day-status day-open">Em Aberto: ${data.aberto}</span>`);
+        if (data.encerrado > 0) $day.append(`<span class="day-status day-finished">Encerrado: ${data.encerrado}</span>`);
     }
 }
 
-
 function generateMonthView(referenceDate) {
-    console.log(referenceDate);
     const nomeMesAno = referenceDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-    const nomeMesCapitalizado = nomeMesAno.charAt(0).toUpperCase() + nomeMesAno.slice(1);
-    $(".title-month").text(nomeMesCapitalizado);
+    $('.title-month').text(nomeMesAno.charAt(0).toUpperCase() + nomeMesAno.slice(1));
+
     const firstDay = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 1);
     const lastDay = new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 0);
 
     const start = new Date(firstDay);
-    start.setDate(firstDay.getDate() - firstDay.getDay()); // começa na segunda
-
+    start.setDate(firstDay.getDate() - firstDay.getDay()); // começa no domingo
     const end = new Date(lastDay);
-    end.setDate(lastDay.getDate() + (6 - end.getDay())); // termina no domingo
+    end.setDate(lastDay.getDate() + (6 - end.getDay()));   // termina no sábado
 
     const days = [];
     while (start <= end) {
@@ -684,117 +720,113 @@ function generateMonthView(referenceDate) {
         start.setDate(start.getDate() + 1);
     }
 
-    const $calendar = $("#month-calendar");
-    $calendar.find(".row-day:not(.row-week)").remove();
+    const $calendar = $('#month-calendar');
+    $calendar.find('.row-day:not(.row-week)').remove();
 
     for (let i = 0; i < days.length; i += 7) {
         const $row = $('<div class="row-day"></div>');
         for (let j = 0; j < 7; j++) {
             const day = days[i + j];
-            const dayKey = day.toISOString().split("T")[0];
-
-            const dayHTML = $(`
-                <div class="calendar-day" data-date="${dayKey}">
+            $row.append(`
+                <div class="calendar-day" data-date="${localKey(day)}">
                     <span>${day.getDate()}</span>
                     <div class="day-events"></div>
-                </div>
-            `);
-
-            $row.append(dayHTML);
+                </div>`);
         }
         $calendar.append($row);
     }
     fillEventsInMonth();
 }
 
+// =========================
+// NAVEGAÇÃO
+// =========================
 function initAfterGroupedReady() {
-    $("#prevWeek").on("click", () => {
-        if (currentIndex > 0) showWeek(currentIndex - 1);
-    });
-    $("#nextWeek").on("click", () => {
-        if (currentIndex < weekKeys.length - 1) showWeek(currentIndex + 1);
-    });
-    $("#todayWeek").on("click", () => {
+    $('#prevWeek').on('click', () => { if (currentIndex > 0) showWeek(currentIndex - 1); });
+    $('#nextWeek').on('click', () => { if (currentIndex < weekKeys.length - 1) showWeek(currentIndex + 1); });
+    $('#todayWeek').on('click', () => {
         const index = weekKeys.indexOf(currentWeekKey);
         if (index !== -1) showWeek(index);
     });
-    $("#prevMonth").on("click", () => {
+
+    // setDate(1) antes de mudar o mês evita pular mês quando o dia é 29, 30 ou 31
+    $('#prevMonth').on('click', () => {
+        currentMonthDate.setDate(1);
         currentMonthDate.setMonth(currentMonthDate.getMonth() - 1);
         generateMonthView(currentMonthDate);
     });
-
-    $("#nextMonth").on("click", () => {
+    $('#nextMonth').on('click', () => {
+        currentMonthDate.setDate(1);
         currentMonthDate.setMonth(currentMonthDate.getMonth() + 1);
         generateMonthView(currentMonthDate);
     });
-
-    $("#todayMonth").on("click", () => {
-        const todayMonthDate = new Date();
-        generateMonthView(todayMonthDate);
+    $('#todayMonth').on('click', () => {
+        currentMonthDate = new Date();
+        generateMonthView(currentMonthDate);
     });
 
-    $("#prevWeek, #nextWeek, #todayWeek").prop("disabled", false);
-    $("#prevWeek, #nextWeek, #todayWeek, #monthView").removeClass("btn-disabled");
-    $("#week-loader").css("display", "none");
+    $('#prevWeek, #nextWeek, #todayWeek').prop('disabled', false);
+    $('#prevWeek, #nextWeek, #todayWeek, #monthView').removeClass('btn-disabled');
+    $('#week-loader').css('display', 'none');
 
-    $("#listView").on("click", function() {
-        $("#month-calendar").css("display", "none");
-        $("#main-calendar").css("display", "flex");
-        $(this).addClass("btn-active-view");
-        $("#monthView").removeClass("btn-active-view");
-        $(".search-box").css("visibility", "visible");
-        $("#btnWeek").css("display", "flex");
-        $("#btnMonth").css("display", "none");
-        $(".title-week").css("display", "flex");
-        $(".title-month").css("display", "none");
+    $('#listView').on('click', function () {
+        $('#month-calendar').css('display', 'none');
+        $('#main-calendar').css('display', 'flex');
+        $(this).addClass('btn-active-view');
+        $('#monthView').removeClass('btn-active-view');
+        $('.search-box').css('visibility', 'visible');
+        $('#btnWeek').css('display', 'flex');
+        $('#btnMonth').css('display', 'none');
+        $('.title-week').css('display', 'flex');
+        $('.title-month').css('display', 'none');
     });
 
-    $("#monthView").on("click", function() {
-        $("#main-calendar").css("display", "none");
-        $("#month-calendar").css("display", "grid");
-        $(this).addClass("btn-active-view");
-        $("#listView").removeClass("btn-active-view");
-        $(".search-box").css("visibility", "hidden");
-        $("#btnWeek").css("display", "none");
-        $("#btnMonth").css("display", "flex");
-        $(".title-week").css("display", "none");
-        $(".title-month").css("display", "flex");
+    $('#monthView').on('click', function () {
+        $('#main-calendar').css('display', 'none');
+        $('#month-calendar').css('display', 'grid');
+        $(this).addClass('btn-active-view');
+        $('#listView').removeClass('btn-active-view');
+        $('.search-box').css('visibility', 'hidden');
+        $('#btnWeek').css('display', 'none');
+        $('#btnMonth').css('display', 'flex');
+        $('.title-week').css('display', 'none');
+        $('.title-month').css('display', 'flex');
     });
 }
 
 async function renderWeekFull() {
     weekKeys = Object.keys(groupedByWeek).sort();
-    currentIndex = weekKeys.indexOf(currentWeekKey);
-    var outras = weekKeys.filter(k => k !== currentWeekKey).reverse();
 
-    if(groupedByWeek[currentWeekKey])
-    {
-        await renderWeek(currentWeekKey, groupedByWeek[currentWeekKey]);
-        showWeek(currentIndex);
-    }
-    else
-    {
-        const newWeekKey = outras[0]
-        const newIndex = weekKeys.indexOf(newWeekKey);
-        await renderWeek(newWeekKey, groupedByWeek[newWeekKey]);
-        showWeek(newIndex);
-        outras = outras.filter(k => k !== newWeekKey);
+    if (!weekKeys.length) {
+        $('#main-table').css('display', 'flex').html('<div class="agenda-empty">Nenhuma OS encontrada no período.</div>');
+        initAfterGroupedReady();
+        return;
     }
 
-    for (const key of outras) {
+    // Semana atual primeiro; se não existir, a mais recente
+    const firstKey = groupedByWeek[currentWeekKey] ? currentWeekKey : weekKeys[weekKeys.length - 1];
+    await renderWeek(firstKey, groupedByWeek[firstKey], true);
+    showWeek(weekKeys.indexOf(firstKey));
 
-        await renderWeek(key, groupedByWeek[key]);
+    const others = weekKeys.filter(k => k !== firstKey).reverse();
+    for (const key of others) {
+        await renderWeek(key, groupedByWeek[key], false);
     }
 
     initAfterGroupedReady();
 }
 
+// =========================
+// INICIALIZAÇÃO
+// =========================
 $(document).ready(function () {
-    $("body").css("overflow-y", "scroll");
-    $("#calendar").css("display", "none");
+    $('body').css('overflow-y', 'scroll');
+    $('#calendar').css('display', 'none');
     setStyle(true);
     createElement();
-    waitForGroupedEvents(() => {
+    bindEvents();
+    waitForCalendar(() => {
+        sessionStorage.removeItem(TRIES_KEY); // carregou: zera o contador do watchdog
         renderWeekFull();
         generateMonthView(new Date());
     });
