@@ -1,14 +1,15 @@
 // ==UserScript==
-// @name         SGP Agenda Plus & Design v2 - Dark
+// @name         SGP Agenda Plus & Design v3.1 - Auto (Light/Dark)
 // @namespace    http://tampermonkey.net/
-// @version      3.0
-// @description  SGP Agenda Plus & Design v2 - Dark
+// @version      3.1
+// @description  SGP Agenda Plus & Design v3.1 - Auto (Light/Dark)
 // @author       Roberth
 // @match        https://fastconnect.sgp.net.br/admin/atendimento/agenda/view/*
 // @match        https://fastfibra.sgp.net.br/admin/atendimento/agenda/view/*
 // @match        https://sgp.fastconnect.net.br/admin/atendimento/agenda/view/*
 // @match        https://sgp.fastfibra.net.br/admin/atendimento/agenda/view/*
 // @match        http://45.164.128.5:8000/admin/atendimento/agenda/view/*
+// @match        http://192.168.5.24:8000/admin/atendimento/agenda/view/*
 // @require      https://code.jquery.com/jquery-3.7.1.min.js
 // @grant        GM_getResourceText
 // @grant        GM_addStyle
@@ -26,6 +27,7 @@
 const MAX_TRIES = 5;          // tentativas automáticas do watchdog (recarregar a página)
 const WATCHDOG_MS = 10000;    // tempo de espera pelos eventos antes de recarregar
 const MAX_CONCURRENT = 6;     // requisições simultâneas à API do SGP
+const DEFAULT_THEME_MODE = 'auto'; // 'auto' | 'light' | 'dark'
 
 // =========================
 // ESTADO
@@ -215,18 +217,311 @@ setTimeout(agendaWatchdog, WATCHDOG_MS);
 // =========================
 // ESTILO
 // =========================
-function setStyle(darkMode) {
-    GM_addStyle(GM_getResourceText('REMOTE_CSS'));
-    if (darkMode) GM_addStyle(GM_getResourceText('REMOTE_CSS_DARK'));
-    GM_addStyle(`
-        .service.no-tech { box-shadow: inset 4px 0 0 #ff9800; }
-        .service .sem-tecnico { color: #ff9800; font-weight: 700; }
-        .service .sem-tecnico::before { content: "⚠ "; }
-        .agenda-empty { width: 100%; padding: 28px; text-align: center; opacity: .7; }
-        .agenda-retry { display: flex; gap: 12px; align-items: center; margin: 10px 15px; padding: 10px 14px;
-            background: #4a2a00; color: #ffcc80; border: 1px solid #ff9800; border-radius: 6px; }
-        .agenda-retry button { background: #ff9800; color: #000; border: 0; border-radius: 4px; padding: 6px 12px; cursor: pointer; font-weight: 700; }
-    `);
+const LIGHT_EXTRA_CSS = `
+    .service.no-tech { box-shadow: inset 4px 0 0 #f59e0b; }
+    .service .sem-tecnico { color: #b45309; font-weight: 700; }
+    .service .sem-tecnico::before { content: "⚠ "; }
+    .agenda-empty { width: 100%; padding: 28px; text-align: center; color: #6b7280; }
+    .agenda-retry { display: flex; gap: 12px; align-items: center; margin: 10px 15px; padding: 10px 14px;
+        background: #fff7ed; color: #9a3412; border: 1px solid #f59e0b; border-radius: 6px; }
+    .agenda-retry button { background: #f59e0b; color: #fff; border: 0; border-radius: 4px; padding: 6px 12px;
+        cursor: pointer; font-weight: 700; }
+    .agenda-retry button:hover { background: #d97706; }
+`;
+
+const DARK_EXTRA_CSS = `
+    .service.no-tech { box-shadow: inset 4px 0 0 #ff9800; }
+    .service .sem-tecnico { color: #ff9800; font-weight: 700; }
+    .service .sem-tecnico::before { content: "⚠ "; }
+    .agenda-empty { width: 100%; padding: 28px; text-align: center; opacity: .7; }
+    .agenda-retry { display: flex; gap: 12px; align-items: center; margin: 10px 15px; padding: 10px 14px;
+        background: #4a2a00; color: #ffcc80; border: 1px solid #ff9800; border-radius: 6px; }
+    .agenda-retry button { background: #ff9800; color: #000; border: 0; border-radius: 4px; padding: 6px 12px;
+        cursor: pointer; font-weight: 700; }
+`;
+
+// =========================
+// TEMA (automático + botão)
+// =========================
+const THEME_MODE_KEY = 'sgpAgendaThemeMode';
+const THEME_MODES = ['auto', 'light', 'dark'];
+const BASE_CSS = GM_getResourceText('REMOTE_CSS');
+const DARK_CSS = GM_getResourceText('REMOTE_CSS_DARK');
+
+let themeMode = 'auto';
+let appliedTheme = null;
+let autoConfident = false;
+let themeButton = null;
+let themeStyleEl = null;
+let baseStyleEl = null;
+let themeClickTimer = null;
+
+function readThemeMode() {
+    try {
+        const saved = localStorage.getItem(THEME_MODE_KEY);
+        if (THEME_MODES.includes(saved)) return saved;
+    } catch (e) { /* storage indisponível */ }
+    return DEFAULT_THEME_MODE;
+}
+
+function saveThemeMode(mode) {
+    try {
+        if (mode === 'auto') localStorage.removeItem(THEME_MODE_KEY);
+        else localStorage.setItem(THEME_MODE_KEY, mode);
+    } catch (e) { /* storage indisponível */ }
+}
+
+// --- Detecção do tema atual do SGP ---
+function parseColor(value) {
+    const m = String(value || '').match(/rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:\s*[,/]\s*([\d.]+))?\s*\)/i);
+    if (!m) return null;
+    return { r: +m[1], g: +m[2], b: +m[3], a: m[4] === undefined ? 1 : +m[4] };
+}
+
+function relativeLuminance(c) {
+    const f = v => {
+        v /= 255;
+        return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    };
+    return 0.2126 * f(c.r) + 0.7152 * f(c.g) + 0.0722 * f(c.b);
+}
+
+function effectiveBackground(el) {
+    let node = el;
+    while (node && node.nodeType === 1) {
+        const c = parseColor(getComputedStyle(node).backgroundColor);
+        if (c && c.a > 0.2) return c;
+        node = node.parentElement;
+    }
+    return null;
+}
+
+function storedSgpTheme() {
+    try {
+        for (const store of [localStorage, sessionStorage]) {
+            for (let i = 0; i < store.length; i++) {
+                const key = store.key(i) || '';
+                if (key === THEME_MODE_KEY || !/theme|tema|dark|color|appearance|modo/i.test(key)) continue;
+                const value = String(store.getItem(key) || '').toLowerCase();
+                if (/\bdark\b|escuro/.test(value)) return 'dark';
+                if (/\blight\b|claro/.test(value)) return 'light';
+            }
+        }
+    } catch (e) { /* storage indisponível */ }
+    return null;
+}
+
+function cookieSgpTheme() {
+    try {
+        for (const pair of String(document.cookie || '').toLowerCase().split(';')) {
+            const [key, ...rest] = pair.trim().split('=');
+            if (!/theme|tema|dark|color|appearance|modo/i.test(key)) continue;
+            const value = decodeURIComponent(rest.join('='));
+            if (/\bdark\b|escuro/.test(value)) return 'dark';
+            if (/\blight\b|claro/.test(value)) return 'light';
+        }
+    } catch (e) { /* cookie inválido */ }
+    return null;
+}
+
+function detectSgpTheme() {
+    const html = document.documentElement;
+    const body = document.body;
+
+    // 1) Classes/atributos que indicam o tema
+    const roots = [html, body];
+    document.querySelectorAll('#app, #wrapper, .app, .wrapper, .main-wrapper, .content-wrapper, .layout, .theme-wrapper').forEach(el => {
+        if (roots.length < 10) roots.push(el);
+    });
+
+    let darkMarker = false;
+    let lightMarker = false;
+    roots.forEach(el => {
+        const raw = [
+            typeof el.className === 'string' ? el.className : '',
+            el.id || '',
+            el.getAttribute('data-theme') || '',
+            el.getAttribute('data-bs-theme') || '',
+            el.getAttribute('data-mode') || '',
+            el.getAttribute('data-color-mode') || '',
+            el.getAttribute('data-skin') || ''
+        ].join(' ');
+
+        raw.split(/\s+/).forEach(token => {
+            const t = token.toLowerCase().replace(/_/g, '-');
+            if (!t) return;
+            if (t === 'dark' || t === 'darkmode' || t === 'dark-mode' || t === 'dark-theme' ||
+                t === 'theme-dark' || t === 'modo-escuro' || t === 'escuro' || t === 'skin-dark') darkMarker = true;
+            if (t === 'light' || t === 'lightmode' || t === 'light-mode' || t === 'light-theme' ||
+                t === 'theme-light' || t === 'modo-claro' || t === 'claro' || t === 'skin-light') lightMarker = true;
+        });
+    });
+    if (darkMarker && !lightMarker) return { theme: 'dark', confident: true };
+    if (lightMarker && !darkMarker) return { theme: 'light', confident: true };
+
+    // 2) Cor de fundo real da página
+    const bg = effectiveBackground(body) || effectiveBackground(html);
+    if (bg) {
+        const lum = relativeLuminance(bg);
+        if (lum < 0.35) return { theme: 'dark', confident: true };
+        if (lum > 0.60) return { theme: 'light', confident: true };
+    }
+
+    // 3) Preferência salva pelo próprio SGP
+    const stored = storedSgpTheme();
+    if (stored) return { theme: stored, confident: true };
+
+    const cookie = cookieSgpTheme();
+    if (cookie) return { theme: cookie, confident: true };
+
+    // 4) Nome de algum CSS carregado
+    const darkLink = Array.from(document.querySelectorAll('link[rel~="stylesheet"]')).some(link => {
+        if (link.disabled || link.media === 'not all') return false;
+        return /(^|[\/_.-])(dark|escuro)([_.-]|$)/i.test(link.getAttribute('href') || link.href || '');
+    });
+    if (darkLink) return { theme: 'dark', confident: true };
+
+    return { theme: 'light', confident: false };
+}
+
+// --- Aplicação do tema ---
+function ensureBaseStyle() {
+    if (baseStyleEl && baseStyleEl.isConnected) return;
+    baseStyleEl = document.createElement('style');
+    baseStyleEl.id = 'sgp-base-css';
+    baseStyleEl.textContent = BASE_CSS;
+    document.head.insertBefore(baseStyleEl, themeStyleEl || null);
+}
+
+function applyTheme(theme, force = false) {
+    if (!force && theme === appliedTheme) return;
+    ensureBaseStyle();
+
+    if (!themeStyleEl || !themeStyleEl.isConnected) {
+        themeStyleEl = document.createElement('style');
+        themeStyleEl.id = 'sgp-theme-css';
+        document.head.appendChild(themeStyleEl);
+    }
+
+    themeStyleEl.textContent = `html[data-sgp-theme="light"]{color-scheme:light}html[data-sgp-theme="dark"]{color-scheme:dark}\n` +
+        (theme === 'dark' ? DARK_CSS + '\n' + DARK_EXTRA_CSS : LIGHT_EXTRA_CSS);
+
+    appliedTheme = theme;
+    document.documentElement.dataset.sgpTheme = theme;
+    console.info('[Agenda Plus] Tema aplicado:', theme);
+    updateThemeButton();
+}
+
+function setThemeMode(mode) {
+    themeMode = THEME_MODES.includes(mode) ? mode : 'auto';
+    saveThemeMode(themeMode);
+    if (themeMode === 'auto') {
+        applyAutoTheme(true);
+    } else {
+        applyTheme(themeMode, true);
+    }
+}
+
+function applyAutoTheme(force = false) {
+    const detected = detectSgpTheme();
+    autoConfident = detected.confident;
+    applyTheme(detected.theme, force);
+}
+
+// --- Botão flutuante ---
+function updateThemeButton() {
+    if (!themeButton) return;
+    const dark = appliedTheme === 'dark';
+    const auto = themeMode === 'auto';
+    const showButton = !auto || !autoConfident;
+
+    themeButton.style.display = showButton ? 'inline-flex' : 'none';
+
+    themeButton.innerHTML = `<span aria-hidden="true" style="font-size:15px;line-height:1;">${dark ? '☾' : '☀'}</span><span>${dark ? 'Escuro' : 'Claro'}</span>${auto ? '<span style="font-size:9px;font-weight:700;letter-spacing:.5px;opacity:.65;border:1px solid currentColor;border-radius:4px;padding:2px 4px;">AUTO</span>' : ''}`;
+    themeButton.title = auto
+        ? `Tema automático (${dark ? 'escuro' : 'claro'}). Clique para alternar; Shift+clique, duplo clique ou botão direito volta ao automático.`
+        : `Tema manual (${dark ? 'escuro' : 'claro'}). Clique para alternar; Shift+clique, duplo clique ou botão direito volta ao automático.`;
+    themeButton.setAttribute('aria-label', themeButton.title);
+
+    Object.assign(themeButton.style, {
+        borderColor: dark ? '#4b5563' : '#d1d5db',
+        background: dark ? '#1f2937' : '#ffffff',
+        color: dark ? '#f9fafb' : '#374151',
+        boxShadow: dark ? '0 8px 22px rgba(0,0,0,.5)' : '0 8px 22px rgba(15,23,42,.18)'
+    });
+}
+
+function createThemeButton() {
+    if (themeButton && themeButton.isConnected) return;
+
+    themeButton = document.createElement('button');
+    themeButton.id = 'sgpThemeToggle';
+    themeButton.type = 'button';
+    Object.assign(themeButton.style, {
+        position: 'fixed',
+        right: '18px',
+        bottom: '18px',
+        zIndex: '2147483000',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '7px',
+        padding: '9px 13px',
+        borderRadius: '999px',
+        border: '1px solid #d1d5db',
+        font: '600 13px/1.1 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
+        cursor: 'pointer',
+        userSelect: 'none',
+        opacity: '0.96',
+        transition: 'background .15s, color .15s, border-color .15s, box-shadow .15s, transform .15s'
+    });
+
+    themeButton.addEventListener('click', e => {
+        if (e.shiftKey) {
+            clearTimeout(themeClickTimer);
+            setThemeMode('auto');
+            return;
+        }
+        clearTimeout(themeClickTimer);
+        // Espera para diferenciar clique de duplo clique
+        themeClickTimer = setTimeout(() => {
+            setThemeMode(appliedTheme === 'dark' ? 'light' : 'dark');
+        }, 220);
+    });
+
+    themeButton.addEventListener('dblclick', () => {
+        clearTimeout(themeClickTimer);
+        setThemeMode('auto');
+    });
+
+    themeButton.addEventListener('contextmenu', e => {
+        e.preventDefault();
+        clearTimeout(themeClickTimer);
+        setThemeMode('auto');
+    });
+
+    themeButton.addEventListener('mouseenter', () => { themeButton.style.transform = 'translateY(-1px)'; });
+    themeButton.addEventListener('mouseleave', () => { themeButton.style.transform = ''; });
+
+    document.body.appendChild(themeButton);
+    updateThemeButton();
+
+    // Atalho de emergência: mostra/alterna o tema quando a detecção automática falhar
+    document.addEventListener('keydown', e => {
+        if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && String(e.key).toLowerCase() === 't') {
+            e.preventDefault();
+            setThemeMode(appliedTheme === 'dark' ? 'light' : 'dark');
+        }
+    });
+}
+
+// --- Inicialização do tema (somente no carregamento da página) ---
+function initTheme() {
+    themeMode = readThemeMode();
+    if (themeMode === 'auto') {
+        applyAutoTheme(true);
+    } else {
+        applyTheme(themeMode, true);
+    }
 }
 
 // =========================
@@ -821,8 +1116,9 @@ async function renderWeekFull() {
 $(document).ready(function () {
     $('body').css('overflow-y', 'scroll');
     $('#calendar').css('display', 'none');
-    setStyle(true);
+    initTheme();
     createElement();
+    createThemeButton();
     bindEvents();
     waitForCalendar(() => {
         sessionStorage.removeItem(TRIES_KEY); // carregou: zera o contador do watchdog
