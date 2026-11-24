@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         SGP Agenda Plus & Design v3.1 - Auto (Light/Dark)
+// @name         SGP Agenda Plus & Design v3.2 - Auto (Light/Dark)
 // @namespace    http://tampermonkey.net/
-// @version      3.1
-// @description  SGP Agenda Plus & Design v3.1 - Auto (Light/Dark)
+// @version      3.2
+// @description  SGP Agenda Plus & Design v3.2 - Auto (Light/Dark)
 // @author       Roberth
 // @match        https://fastconnect.sgp.net.br/admin/atendimento/agenda/view/*
 // @match        https://fastfibra.sgp.net.br/admin/atendimento/agenda/view/*
@@ -23,8 +23,7 @@
 // =========================
 // CONFIGURAÇÕES
 // =========================
-const MAX_TRIES = 5;          // tentativas automáticas do watchdog (recarregar a página)
-const WATCHDOG_MS = 10000;    // tempo de espera pelos eventos antes de recarregar
+const WATCHDOG_MS = 30000;
 const MAX_CONCURRENT = 6;     // requisições simultâneas à API do SGP
 const DEFAULT_THEME_MODE = 'auto'; // 'auto' | 'light' | 'dark'
 
@@ -44,7 +43,6 @@ let currentMonthDate = new Date();
 let currentModalId = null;
 
 const W = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
-const TRIES_KEY = 'agendaTries:' + location.href;
 
 // =========================
 // HELPERS
@@ -117,20 +115,24 @@ function getWeekKey(dateLike) {
 const currentWeekKey = getWeekKey(new Date());
 
 function groupedEvents(events) {
+    if (!Array.isArray(events)) return;
+
     const mapped = events
+        .filter(e => e && (e.start || e.startStr))
         .map(e => ({
             id: e.id,
-            title: e.title,
+            title: e.title || '',
             situation: e.is_encerrado,
             holiday: e.is_feriado || false,
-            date: new Date(e.start)
+            date: new Date(e.start || e.startStr)
         }))
+        .filter(e => !Number.isNaN(e.date.getTime()))
         .sort((a, b) => a.date - b.date);
 
     mapped.forEach(ev => {
         const dateKey = localKey(ev.date);
         const uid = ev.id ? `os-${ev.id}` : `h-${dateKey}-${ev.title}`;
-        if (seenEvents.has(uid)) return; // evita duplicar se o calendário for criado 2x
+        if (seenEvents.has(uid)) return;
         seenEvents.add(uid);
 
         if (ev.id) {
@@ -145,33 +147,139 @@ function groupedEvents(events) {
             (situationDay[dateKey] ||= { encerrado: 0, aberto: 0 })[statusKey]++;
         }
     });
+
+    // Uma lista vazia também é uma captura válida.
+    calendarCaptured = true;
+
+    const notice = document.getElementById('agendaRetryNotice');
+    if (notice) notice.remove();
 }
 
 // =========================
 // HOOK NO FULLCALENDAR
 // =========================
 (function hookCalendar() {
+    const HOOK_MARK = Symbol.for('sgpAgendaPlus.calendarHook.v32');
+
+    function captureEvents(events) {
+        if (!Array.isArray(events)) return;
+
+        setTimeout(() => {
+            try {
+                groupedEvents(events);
+            } catch (error) {
+                console.error('[Agenda Plus] Erro ao processar eventos do calendário:', error);
+            }
+        }, 0);
+    }
+
+    function wrapEventProvider(provider) {
+        if (Array.isArray(provider)) {
+            captureEvents(provider);
+            return provider;
+        }
+
+        if (typeof provider !== 'function' || provider[HOOK_MARK]) {
+            return provider;
+        }
+
+        const wrapped = function (...args) {
+            // FullCalendar v3: callback no índice 3.
+            // FullCalendar v4+: successCallback no índice 1.
+            const callbackIndex = typeof args[3] === 'function' ? 3 :
+                (typeof args[1] === 'function' ? 1 : -1);
+
+            if (callbackIndex !== -1) {
+                const originalCallback = args[callbackIndex];
+
+                args[callbackIndex] = function (events, ...rest) {
+                    captureEvents(events);
+                    return originalCallback.call(this, events, ...rest);
+                };
+            }
+
+            const result = provider.apply(this, args);
+
+            // Suporte a providers que retornam Promise.
+            if (result && typeof result.then === 'function') {
+                return result.then(events => {
+                    captureEvents(events);
+                    return events;
+                });
+            }
+
+            return result;
+        };
+
+        wrapped[HOOK_MARK] = true;
+        return wrapped;
+    }
+
+    function instrumentOptions(options) {
+        if (!options || typeof options !== 'object') return;
+
+        if (options.events !== undefined) {
+            options.events = wrapEventProvider(options.events);
+        }
+
+        if (Array.isArray(options.eventSources)) {
+            options.eventSources = options.eventSources.map(source => {
+                if (Array.isArray(source)) {
+                    captureEvents(source);
+                    return source;
+                }
+
+                if (typeof source === 'function') {
+                    return wrapEventProvider(source);
+                }
+
+                if (source && typeof source === 'object' && source.events !== undefined) {
+                    return {
+                        ...source,
+                        events: wrapEventProvider(source.events)
+                    };
+                }
+
+                return source;
+            });
+        }
+    }
+
     const timer = setInterval(() => {
         const FC = W.FullCalendar;
-        if (!FC || !FC.Calendar) return;
+
+        if (!FC || typeof FC.Calendar !== 'function') return;
+
+        if (FC.Calendar[HOOK_MARK]) {
+            clearInterval(timer);
+            return;
+        }
+
         clearInterval(timer);
 
         const OriginalCalendar = FC.Calendar;
-        OriginalCalendar.prototype.render = function () {}; // bloqueia o render nativo
 
-        FC.Calendar = function (...args) {
-            const options = args[1] || {};
-            if (Array.isArray(options.events)) {
-                const events = options.events;
-                setTimeout(() => {
-                    groupedEvents(events);
-                    calendarCaptured = true;
-                }, 0);
-            }
-            return new OriginalCalendar(...args);
-        };
-        FC.Calendar.prototype = OriginalCalendar.prototype;
+        // Intercepta somente a fonte de eventos.
+        // Não sobrescreve o render() original.
+        function WrappedCalendar(...args) {
+            instrumentOptions(args[1]);
+
+            return Reflect.construct(
+                OriginalCalendar,
+                args,
+                new.target || OriginalCalendar
+            );
+        }
+
+        WrappedCalendar.prototype = OriginalCalendar.prototype;
+        Object.setPrototypeOf(WrappedCalendar, OriginalCalendar);
+        WrappedCalendar[HOOK_MARK] = true;
+
+        FC.Calendar = WrappedCalendar;
+
+        console.info('[Agenda Plus] Captura de eventos instalada sem bloquear o render nativo.');
     }, 10);
+
     setTimeout(() => clearInterval(timer), 60000);
 })();
 
@@ -185,32 +293,30 @@ function waitForCalendar(callback) {
 }
 
 // =========================
-// WATCHDOG (repete o carregamento sozinho, com limite)
+// WATCHDOG (somente aviso; nunca força F5)
 // =========================
 function agendaWatchdog() {
-    if (calendarCaptured) return;
+    if (calendarCaptured || document.getElementById('agendaRetryNotice')) return;
 
-    const tries = +sessionStorage.getItem(TRIES_KEY) || 0;
-    if (tries >= MAX_TRIES) {
-        console.error(`[Agenda Watchdog] Falhou após ${MAX_TRIES} tentativas.`);
-        $(function () {
-            $('body').prepend(`
-                <div class="agenda-retry">
-                    <span>A agenda não carregou após ${MAX_TRIES} tentativas automáticas.</span>
-                    <button type="button" id="agendaRetryBtn">Tentar novamente</button>
-                </div>`);
-            $('#agendaRetryBtn').on('click', () => {
-                sessionStorage.removeItem(TRIES_KEY);
-                location.reload();
-            });
-        });
-        return;
-    }
+    console.warn(`[Agenda Watchdog] Nenhum evento foi capturado após ${WATCHDOG_MS / 1000}s. A página não será recarregada automaticamente.`);
 
-    sessionStorage.setItem(TRIES_KEY, tries + 1);
-    console.warn(`[Agenda Watchdog] Sem dados após ${WATCHDOG_MS / 1000}s. Tentativa ${tries + 1}/${MAX_TRIES}, recarregando...`);
-    location.reload();
+    $(function () {
+        if (calendarCaptured || document.getElementById('agendaRetryNotice')) return;
+
+        // Devolve a agenda nativa ao usuário.
+        $('#calendar').css('display', 'block');
+        $('#main-calendar, .menu-box, #month-calendar').css('display', 'none');
+
+        $('body').prepend(`
+            <div class="agenda-retry" id="agendaRetryNotice">
+                <span>Não foi possível capturar os eventos da agenda. O calendário original do SGP continua disponível. Você pode tentar novamente manualmente.</span>
+                <button type="button" id="agendaRetryBtn">Tentar novamente</button>
+            </div>`);
+
+        $('#agendaRetryBtn').on('click', () => location.reload());
+    });
 }
+
 setTimeout(agendaWatchdog, WATCHDOG_MS);
 
 // =========================
@@ -1120,8 +1226,13 @@ $(document).ready(function () {
     createThemeButton();
     bindEvents();
     waitForCalendar(() => {
-        sessionStorage.removeItem(TRIES_KEY); // carregou: zera o contador do watchdog
-        renderWeekFull();
-        generateMonthView(new Date());
-    });
+    $('#calendar').css('display', 'none');
+    $('#main-calendar, .menu-box').css('display', '');
+
+    const notice = document.getElementById('agendaRetryNotice');
+    if (notice) notice.remove();
+
+    renderWeekFull();
+    generateMonthView(new Date());
+});
 });
