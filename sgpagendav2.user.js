@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         SGP Agenda Plus & Design v3.2 - Auto (Light/Dark)
+// @name         SGP Agenda Plus & Design v3.3 - Auto (Light/Dark)
 // @namespace    http://tampermonkey.net/
-// @version      3.2
-// @description  SGP Agenda Plus & Design v3.2 - Auto (Light/Dark)
+// @version      3.3
+// @description  SGP Agenda Plus & Design v3.3 - Auto (Light/Dark)
 // @author       Roberth
 // @match        https://fastconnect.sgp.net.br/admin/atendimento/agenda/view/*
 // @match        https://fastfibra.sgp.net.br/admin/atendimento/agenda/view/*
@@ -158,22 +158,35 @@ function groupedEvents(events) {
 // =========================
 // HOOK NO FULLCALENDAR
 // =========================
+
 (function hookCalendar() {
-    const HOOK_MARK = Symbol.for('sgpAgendaPlus.calendarHook.v32');
+    const HOOK_MARK = Symbol.for('sgpAgendaPlus.calendarHook.v33');
+    let installed = false;
 
     function captureEvents(events) {
         if (!Array.isArray(events)) return;
 
         setTimeout(() => {
             try {
-                groupedEvents(events);
+                const normalized = events.map(e => ({
+                    id: e.id,
+                    title: e.title || '',
+                    start: e.start,
+                    startStr: e.startStr,
+                    is_encerrado: e.is_encerrado ??
+                        e.extendedProps?.is_encerrado,
+                    is_feriado: e.is_feriado ??
+                        e.extendedProps?.is_feriado
+                }));
+
+                groupedEvents(normalized);
             } catch (error) {
-                console.error('[Agenda Plus] Erro ao processar eventos do calendário:', error);
+                console.error('[Agenda Plus] Erro na captura:', error);
             }
         }, 0);
     }
 
-    function wrapEventProvider(provider) {
+    function wrapProvider(provider) {
         if (Array.isArray(provider)) {
             captureEvents(provider);
             return provider;
@@ -184,23 +197,21 @@ function groupedEvents(events) {
         }
 
         const wrapped = function (...args) {
-            // FullCalendar v3: callback no índice 3.
-            // FullCalendar v4+: successCallback no índice 1.
-            const callbackIndex = typeof args[3] === 'function' ? 3 :
-                (typeof args[1] === 'function' ? 1 : -1);
+            // FullCalendar 6: (fetchInfo, successCallback, failureCallback)
+            const callbackIndex = typeof args[1] === 'function' ? 1 :
+                (typeof args[3] === 'function' ? 3 : -1);
 
             if (callbackIndex !== -1) {
-                const originalCallback = args[callbackIndex];
+                const original = args[callbackIndex];
 
                 args[callbackIndex] = function (events, ...rest) {
                     captureEvents(events);
-                    return originalCallback.call(this, events, ...rest);
+                    return original.call(this, events, ...rest);
                 };
             }
 
             const result = provider.apply(this, args);
 
-            // Suporte a providers que retornam Promise.
             if (result && typeof result.then === 'function') {
                 return result.then(events => {
                     captureEvents(events);
@@ -215,52 +226,57 @@ function groupedEvents(events) {
         return wrapped;
     }
 
-    function instrumentOptions(options) {
-        if (!options || typeof options !== 'object') return;
-
-        if (options.events !== undefined) {
-            options.events = wrapEventProvider(options.events);
-        }
-
-        if (Array.isArray(options.eventSources)) {
-            options.eventSources = options.eventSources.map(source => {
-                if (Array.isArray(source)) {
-                    captureEvents(source);
-                    return source;
-                }
-
-                if (typeof source === 'function') {
-                    return wrapEventProvider(source);
-                }
-
-                if (source && typeof source === 'object' && source.events !== undefined) {
-                    return {
-                        ...source,
-                        events: wrapEventProvider(source.events)
-                    };
-                }
-
-                return source;
-            });
-        }
-    }
-
-    const timer = setInterval(() => {
-        const FC = W.FullCalendar;
-
-        if (!FC || typeof FC.Calendar !== 'function') return;
-
-        if (FC.Calendar[HOOK_MARK]) {
-            clearInterval(timer);
+    function install(FC) {
+        if (installed || !FC ||
+            typeof FC.Calendar !== 'function' ||
+            FC.Calendar[HOOK_MARK]) {
             return;
         }
 
-        clearInterval(timer);
-
         const OriginalCalendar = FC.Calendar;
 
-        // Intercepta somente a fonte de eventos.
-        // Não sobrescreve o render() original.
+        function instrumentOptions(options) {
+            if (!options || typeof options !== 'object') return;
+
+            // Captura eventos após o FullCalendar processá-los.
+            const originalEventsSet = options.eventsSet;
+
+            options.eventsSet = function (events) {
+                captureEvents(events);
+
+                if (typeof originalEventsSet === 'function') {
+                    return originalEventsSet.apply(this, arguments);
+                }
+            };
+
+            if (options.events !== undefined) {
+                options.events = wrapProvider(options.events);
+            }
+
+            if (Array.isArray(options.eventSources)) {
+                options.eventSources = options.eventSources.map(source => {
+                    if (Array.isArray(source)) {
+                        captureEvents(source);
+                        return source;
+                    }
+
+                    if (typeof source === 'function') {
+                        return wrapProvider(source);
+                    }
+
+                    if (source && typeof source === 'object' &&
+                        source.events !== undefined) {
+                        return {
+                            ...source,
+                            events: wrapProvider(source.events)
+                        };
+                    }
+
+                    return source;
+                });
+            }
+        }
+
         function WrappedCalendar(...args) {
             instrumentOptions(args[1]);
 
@@ -276,12 +292,61 @@ function groupedEvents(events) {
         WrappedCalendar[HOOK_MARK] = true;
 
         FC.Calendar = WrappedCalendar;
+        installed = true;
 
-        console.info('[Agenda Plus] Captura de eventos instalada sem bloquear o render nativo.');
+        console.info(
+            '[Agenda Plus] Hook v3.3 instalado antes da criação do calendário.'
+        );
+    }
+
+    // Tenta instalar imediatamente, caso a biblioteca já exista.
+    if (W.FullCalendar) {
+        install(W.FullCalendar);
+    }
+
+    // Intercepta a atribuição global da biblioteca.
+    const descriptor = Object.getOwnPropertyDescriptor(W, 'FullCalendar');
+
+    if (!descriptor || descriptor.configurable) {
+        let currentValue = W.FullCalendar;
+
+        try {
+            Object.defineProperty(W, 'FullCalendar', {
+                configurable: true,
+                enumerable: descriptor?.enumerable ?? true,
+
+                get() {
+                    return currentValue;
+                },
+
+                set(value) {
+                    currentValue = value;
+                    install(value);
+                }
+            });
+        } catch (error) {
+            console.warn(
+                '[Agenda Plus] Não foi possível interceptar FullCalendar:',
+                error
+            );
+        }
+    }
+
+    // Fallback para ambientes onde a propriedade não pode ser interceptada.
+    const timer = setInterval(() => {
+        if (installed) {
+            clearInterval(timer);
+            return;
+        }
+
+        if (W.FullCalendar) {
+            install(W.FullCalendar);
+        }
     }, 10);
 
     setTimeout(() => clearInterval(timer), 60000);
 })();
+
 
 function waitForCalendar(callback) {
     const t = setInterval(() => {
